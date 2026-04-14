@@ -129,6 +129,14 @@ Invariants:
 
 ## Credits
 
-- Charter & mission framing: Elisabeth Hendrickson, *Explore It!*
-- Session-based test management: James Bach, Jon Bach, Michael Bolton.
+- **Charter & mission framing** — from Elisabeth Hendrickson's *Explore It!*.
+  A charter is a short mission statement ("explore X, with Y, to discover Z")
+  that gives a tester a clear target without scripting every step. Each file
+  under `charters/` is one such mission — it's what keeps a run focused and
+  exploratory instead of drifting into ad-hoc clicking.
+- **Session-based test management (SBTM)** — from James Bach, Jon Bach, and
+  Michael Bolton. Testing happens in time-boxed, chartered sessions that
+  produce a structured debrief: what was tested, what wasn't, what was found,
+  and where time went. `report.md` follows this shape so a run is auditable
+  after the fact, not just a wall of agent chatter.
 - Brain/vault pattern: [poteto/brainmaxxing](https://github.com/poteto/brainmaxxing).
