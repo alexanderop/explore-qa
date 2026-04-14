@@ -44,6 +44,12 @@ Ask the user, in one turn (bundle via AskUserQuestion if available):
    scenarios, overview, journeys, and known quirks in that language. Keep
    frontmatter keys, `{{site}}`/`{{browser}}` placeholders, selectors, URLs,
    and fragment names (`_browser-workflow`, `_report-format`) as-is.
+   **Also add a "Report language" directive to every generated charter body**
+   (e.g. `**Report language:** German — write the final report at {{reportPath}},
+   all finding titles, summaries, and notes in German. Keep code, URLs,
+   selectors, and log excerpts verbatim.`). The `_report-format` fragment
+   itself stays English — the per-charter directive overrides the output
+   language so reports match the authoring language the user picked.
 
 If `sites/<name>.md` already exists, ask: overwrite, edit, or pick a different
 name. Never silently overwrite.
