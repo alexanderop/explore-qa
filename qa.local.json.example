@@ -1,0 +1,7 @@
+{
+  "site": "example",
+  "agent": "claude",
+  "browser": "agent-browser",
+  "model": "claude-opus-4-6",
+  "maxTurns": 40
+}

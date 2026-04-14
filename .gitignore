@@ -1,0 +1,5 @@
+node_modules
+qa.local.json
+qa-runs/
+brain/sites/
+.playwright-cli/

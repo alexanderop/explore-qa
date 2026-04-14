@@ -1,0 +1,24 @@
+{
+  "name": "explore-qa",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "An agent-driven exploratory testing harness you can point at any website.",
+  "license": "MIT",
+  "scripts": {
+    "qa": "bun scripts/qa.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check . && bun run typecheck && bun test",
+    "knip": "knip",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.11",
+    "@types/bun": "latest",
+    "knip": "^6.4.1",
+    "lefthook": "^2.1.5",
+    "typescript": "^5.6.0"
+  }
+}
