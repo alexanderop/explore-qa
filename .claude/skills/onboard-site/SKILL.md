@@ -35,6 +35,15 @@ Ask the user, in one turn (bundle via AskUserQuestion if available):
 3. **Scope hint** — e-commerce, content site, SaaS app, search engine, or
    other. Used to pick starter charters.
 4. **Viewport** — default `iPhone 15 Pro`. Override only if the user insists.
+5. **Authoring language** — the language the site profile and charters should
+   be written in. Default `English`. Offer the site's primary language as a
+   second option when it's obviously non-English (e.g. `otto.de` → German,
+   `rakuten.co.jp` → Japanese). The harness prompts stay English regardless —
+   only the user-owned content under `sites/` and `charters/` is translated.
+   If the user picks a non-English language, write mission, areas, risks,
+   scenarios, overview, journeys, and known quirks in that language. Keep
+   frontmatter keys, `{{site}}`/`{{browser}}` placeholders, selectors, URLs,
+   and fragment names (`_browser-workflow`, `_report-format`) as-is.
 
 If `sites/<name>.md` already exists, ask: overwrite, edit, or pick a different
 name. Never silently overwrite.

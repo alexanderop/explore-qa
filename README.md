@@ -189,6 +189,23 @@ CLI args > env vars > `qa.local.json` > charter frontmatter > hardcoded defaults
 
 Copy `qa.local.json.example` to `qa.local.json` and edit once per machine.
 
+## Agent permissions
+
+All three agent CLIs run in fully permissive mode — the harness is
+non-interactive, so the agent cannot stop to ask a human for approval, and a
+single unapproved shell call would stall the whole run. Concretely
+(`scripts/lib/agents.ts`):
+
+- **Claude Code** — `--permission-mode bypassPermissions`
+- **Codex CLI** — `--dangerously-bypass-approvals-and-sandbox`
+- **Copilot CLI** — `--allow-all-tools` (the CLI help explicitly calls this
+  "required for non-interactive mode")
+
+This is intentional: charter runs are sandboxed to a scratch run directory
+under `qa-runs/`, and the agents are told via prompt which browser CLI to use.
+Only run `explore-qa` against sites and on machines where you're comfortable
+giving a coding agent full shell access for the duration of the run.
+
 ## Editing prompts
 
 Invariants:
