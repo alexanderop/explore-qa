@@ -39,6 +39,14 @@ directly — there is no i18n layer.
   subcommands back in the prompts.
 - Screenshots only on findings and key states. Token/time budget.
 
+## Skills are shared across all three agent CLIs
+
+Skills live under `.claude/skills/` and are exposed to Codex via a symlink at
+`.agents/skills → ../.claude/skills`. Claude Code and Copilot CLI already read
+`.claude/skills/` natively; Codex only reads `.agents/skills/`. Do not
+duplicate skill files — edit the originals under `.claude/skills/` and the
+symlink does the rest. Do not delete the symlink; Codex will lose every skill.
+
 ## Brain discipline
 
 - `brain/_core/` — generic principles, shipped with explore-qa. Edit carefully,

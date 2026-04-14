@@ -80,8 +80,17 @@ Per run, artifacts land under `qa-runs/charters/<charter>/_attachments/<runId>/`
 
 ## Skills
 
-`explore-qa` ships four Claude Code skills under `.claude/skills/`. They only
-work with the `claude` agent (other agents cannot write to `brain/`).
+`explore-qa` ships four skills under `.claude/skills/`, with a symlink at
+`.agents/skills → ../.claude/skills` so all three agent CLIs pick them up:
+
+- **Claude Code** reads `.claude/skills/` natively.
+- **Copilot CLI** reads `.claude/skills/` natively (it also scans
+  `.github/skills/` and `.agents/skills/`).
+- **Codex CLI** only scans `.agents/skills/`, which is why the symlink exists.
+
+The skills write to `brain/sites/<active>/`, which only `claude` can do reliably
+today — `codex` and `copilot` can read the skills but aren't expected to run
+`/reflect` or `/meditate`.
 
 - **`/onboard-site <url>`** — scaffold `sites/<name>.md`, two or three starter
   charters, and `brain/sites/<name>/` by browsing the target and asking a few
