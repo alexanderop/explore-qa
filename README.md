@@ -176,6 +176,21 @@ today — `codex` and `copilot` can read the skills but aren't expected to run
   charter run.
 - **`/meditate`** — audit `brain/` for duplicates, contradictions, stale nodes.
   Proposes only; does not edit.
+- **`/agent-battle <charter>`** — run one charter in parallel across all three
+  agents (`claude`, `codex`, `copilot`) on `agent-browser`, stream live status
+  ticks from each session log, and produce a comparison report (speed,
+  findings, discipline, report quality). Useful for picking which agent to
+  trust on a given site, or for spotting prompt regressions.
+
+  ```
+  > /agent-battle otto-cart-to-checkout.md
+  • Charter: otto-cart-to-checkout, site: otto. Starting all three agents in parallel.
+  • Bash(bun scripts/qa.ts otto-cart-to-checkout claude  agent-browser otto)
+  • Bash(bun scripts/qa.ts otto-cart-to-checkout codex   agent-browser otto)
+  • Bash(bun scripts/qa.ts otto-cart-to-checkout copilot agent-browser otto)
+  • All three agents launched. Scheduling first poll.
+  • Three agents running on otto-cart-to-checkout. First status tick in ~60s.
+  ```
 
 ## Settings precedence
 
