@@ -100,10 +100,6 @@ async function wizard(): Promise<void> {
     const modelAns = (await rl.question(`\nModel [Enter = ${modelDefault}]: `)).trim();
     const model = modelAns || modelDefault;
 
-    const turnsDefault = local.maxTurns ?? meta.defaultMaxTurns;
-    const turnsAns = (await rl.question(`Max turns [Enter = ${turnsDefault}]: `)).trim();
-    const maxTurns = turnsAns ? Number(turnsAns) : turnsDefault;
-
     rl.close();
 
     console.log("\n--- Summary ---");
@@ -112,7 +108,6 @@ async function wizard(): Promise<void> {
     console.log(`Agent:     ${agent}`);
     console.log(`Browser:   ${browser}`);
     console.log(`Model:     ${model}`);
-    console.log(`Max turns: ${maxTurns}`);
     console.log(`\nDirect next time: bun scripts/qa.ts ${charter} ${agent} ${browser} ${site}`);
     console.log();
 
@@ -122,7 +117,6 @@ async function wizard(): Promise<void> {
       browser,
       site,
       model,
-      maxTurns,
     });
     if (exitCode !== 0) process.exit(exitCode);
   } finally {

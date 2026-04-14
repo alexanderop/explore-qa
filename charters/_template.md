@@ -6,7 +6,6 @@ defaultModel:
   claude: claude-opus-4-6
   codex: gpt-5.4
   copilot: gpt-5.4
-defaultMaxTurns: 40
 defaultBrowser: agent-browser
 includeFragments:
   - _browser-workflow

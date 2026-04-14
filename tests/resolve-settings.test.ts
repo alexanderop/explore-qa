@@ -7,7 +7,6 @@ const baseCharter: CharterMeta = {
   runRoot: "qa-runs",
   artifact: "report.md",
   defaultModel: { claude: "claude-opus-4-6" },
-  defaultMaxTurns: 50,
   includeFragments: [],
 };
 
@@ -76,11 +75,6 @@ describe("resolveRunSettings precedence ladder", () => {
     );
     expect((await call({ localConfig: { site: "acme" } })).site).toBe("acme");
     expect((await call()).site).toBe("example");
-  });
-
-  test("MAX_TURNS env is coerced to number", async () => {
-    const s = await call({ env: { MAX_TURNS: "7" } });
-    expect(s.maxTurns).toBe(7);
   });
 
   test("MODEL env wins over local config", async () => {

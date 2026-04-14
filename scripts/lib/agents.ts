@@ -15,7 +15,6 @@ type InvocationContext = {
   runId: string;
   logDir: string;
   model: string;
-  maxTurns: number;
   browser: Browser;
 };
 
@@ -38,8 +37,6 @@ export async function buildInvocation(agent: Agent, ctx: InvocationContext): Pro
           ctx.prompt,
           "--model",
           ctx.model,
-          "--max-turns",
-          String(ctx.maxTurns),
           "--output-format",
           "stream-json",
           "--include-partial-messages",

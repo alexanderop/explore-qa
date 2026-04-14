@@ -4,14 +4,13 @@ import { parseFrontmatter } from "../scripts/lib/compose.ts";
 const wrap = (yaml: string, body = "# Body\n\nHello") => `---\n${yaml}\n---\n${body}`;
 
 describe("parseFrontmatter", () => {
-  test("parses scalar fields and coerces numbers", () => {
+  test("parses scalar fields", () => {
     const { meta, body } = parseFrontmatter(
-      wrap("name: foo\nrunRoot: qa-runs/x\nartifact: report.md\ndefaultMaxTurns: 42"),
+      wrap("name: foo\nrunRoot: qa-runs/x\nartifact: report.md"),
     );
     expect(meta.name).toBe("foo");
     expect(meta.runRoot).toBe("qa-runs/x");
     expect(meta.artifact).toBe("report.md");
-    expect(meta.defaultMaxTurns).toBe(42);
     expect(body).toContain("# Body");
   });
 
@@ -57,7 +56,6 @@ describe("parseFrontmatter", () => {
     const { meta } = parseFrontmatter(wrap("name: foo"));
     expect(meta.runRoot).toBe("qa-runs");
     expect(meta.artifact).toBe("report.md");
-    expect(meta.defaultMaxTurns).toBe(100);
     expect(meta.includeFragments).toEqual([]);
   });
 });

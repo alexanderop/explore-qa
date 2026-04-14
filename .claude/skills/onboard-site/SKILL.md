@@ -76,14 +76,13 @@ All paths are relative to the repo root.
      delay — no speculation)
    - Out of scope (explicit — auth, checkout, real payments)
 
-2. **`charters/<name>-smoke.md`** — a 10-turn smoke charter scoped to the
+2. **`charters/<name>-smoke.md`** — a smoke charter scoped to the
    home page + top nav. Copy `charters/_template.md`, fill in the placeholders,
    remove HTML comments, reference `{{site}}` rather than the hardcoded URL.
 
 3. **One or two focused charters** named `<name>-<journey>.md` — one per
-   critical journey from Discovery step 5. `maxTurns` ~30–40. Same rules as
-   the smoke charter. Skip this step if discovery surfaced only one reliable
-   journey.
+   critical journey from Discovery step 5. Same rules as the smoke charter.
+   Skip this step if discovery surfaced only one reliable journey.
 
 4. **`brain/sites/<name>/index.md`** — a short stub:
    ```markdown
@@ -97,7 +96,7 @@ All paths are relative to the repo root.
 5. **`qa.local.json`** — if the file does not exist, create it with
    `{ "site": "<name>", "agent": "claude", "browser": "agent-browser" }`.
    If it exists, update the `site` key and preserve every other key as-is.
-   Never clobber the user's existing agent/browser/model/maxTurns overrides.
+   Never clobber the user's existing agent/browser/model overrides.
 
 ## Validate before handing back
 

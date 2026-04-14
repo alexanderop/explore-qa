@@ -11,6 +11,34 @@ Markdown session report following SBTM + PROOF.
 It is not a test runner and it is not a scripted suite. It is closer to giving
 a QA engineer a mission statement and a browser.
 
+## Mental model for QA engineers
+
+If you've done session-based exploratory testing, this is the same loop —
+just with an LLM agent in the tester seat:
+
+```
+   YOU                       EXPLORE-QA                    AGENT + BROWSER
+ ┌──────┐  charter +     ┌──────────────┐   prompt    ┌────────────────────┐
+ │ Pick │  site profile  │   compose    │  ────────►  │  claude / codex /  │
+ │ a    │ ─────────────► │  (prompt     │             │  copilot           │
+ │ test │                │   builder)   │             │         │          │
+ │ goal │                └──────────────┘             │         ▼          │
+ └──────┘                       ▲                     │  agent-browser /   │
+    ▲                           │                     │  playwright-cli    │
+    │                           │ brain               │         │          │
+    │                           │ (principles +       │         ▼          │
+    │                           │  past findings)     │   real website     │
+    │                                                 └────────────────────┘
+    │                                                          │
+    │                                                          ▼
+    │                                                   report.md +
+    └────────────  read & triage  ◄──────────────────   screenshots
+```
+
+You write the **charter** (the mission). The harness builds the **prompt**.
+The agent runs the **session** in a real browser and hands you back a
+**Markdown report** with findings, screenshots, and a session log you can audit.
+
 ## Quickstart
 
 Prereqs: [Bun](https://bun.sh), at least one of `claude` / `codex` / `copilot`
@@ -48,13 +76,39 @@ with your own via `/onboard-site`.
 
 ## How it works
 
+What goes into one run:
+
+```
+                INPUTS                              OUTPUTS
+
+  charters/<charter>.md  ──┐
+  (the mission)            │
+                           │
+  sites/<site>.md  ────────┤
+  (baseUrl, journeys,      │
+   known quirks)           │
+                           ├──►  compose.ts  ──►  agent CLI  ──►  qa-runs/
+  prompts/_*.md  ──────────┤    (builds the      (claude/         charters/
+  (system rules,           │     full prompt)     codex/           <charter>/
+   honesty checks,         │                      copilot)         _attachments/
+   browser workflow)       │           │                            <runId>/
+                           │           ▼                            ├─ report.md
+  brain/_core/  ───────────┤      systemPrompt                      ├─ screenshots/
+  (generic QA              │      + userPrompt                      └─ logs/
+   principles)             │           │                                ├─ <agent>-
+                           │           ▼                                │  session
+  brain/sites/<site>/  ────┘      browser CLI                           │  .jsonl
+  (per-site findings,             (agent-browser /                      └─ excerpts
+   gitignored)                     playwright-cli)
+```
+
 Seven moving parts:
 
 1. **`sites/<name>.md`** — site profile. Frontmatter (`baseUrl`, `viewport`) +
    free-form Markdown body (critical journeys, consent banner, known quirks).
    Inlined into the system prompt for the active site.
 2. **`charters/<name>.md`** — one charter = one test mission. Frontmatter
-   (`runRoot`, `artifact`, `defaultModel`, `defaultMaxTurns`, `defaultBrowser`,
+   (`runRoot`, `artifact`, `defaultModel`, `defaultBrowser`,
    `includeFragments`) + Markdown body with mission, areas, risks, scenarios.
 3. **`prompts/_*.md`** — shared prompt fragments. `_system.md` and
    `_honesty-checks.md` are always inlined into the system prompt;
@@ -71,6 +125,27 @@ Seven moving parts:
 7. **`scripts/lib/browsers.ts`** — switch over `agent-browser` | `playwright-cli`
    that returns the tool name, the agent allowlist pattern, and any
    browser-specific env vars. Add new browser backends here only.
+
+### Lifecycle of a charter run
+
+```
+  bun scripts/qa.ts <charter> <agent> <browser> <site>
+        │
+        ▼
+  ┌────────────────────────────────────────────────────────────┐
+  │ 1. resolve settings  (CLI > env > qa.local.json > charter) │
+  │ 2. compose prompt    (fragments + site + brain)            │
+  │ 3. mkdir runDir      qa-runs/.../<runId>/                  │
+  │ 4. spawn agent CLI   with allowlist for the browser tool   │
+  │ 5. agent loops:      browse → observe → screenshot → note  │
+  │ 6. agent writes      report.md (SBTM + PROOF shape)        │
+  │ 7. harness captures  full session log → logs/              │
+  └────────────────────────────────────────────────────────────┘
+        │
+        ▼
+  You read report.md, triage findings, optionally run /reflect
+  to fold new learnings into brain/sites/<site>/.
+```
 
 Per run, artifacts land under `qa-runs/charters/<charter>/_attachments/<runId>/`:
 
@@ -108,9 +183,9 @@ Settings resolve in this order (highest wins):
 
 CLI args > env vars > `qa.local.json` > charter frontmatter > hardcoded defaults.
 
-- env: `SITE`, `AGENT`, `BROWSER`, `MODEL`, `MAX_TURNS`, `RUN_ID`, `RUN_DIR`, `CHARTER`
-- `qa.local.json` (gitignored): `{ "site", "agent", "browser", "model", "maxTurns" }`
-- charter frontmatter: `defaultModel`, `defaultMaxTurns`, `defaultBrowser`
+- env: `SITE`, `AGENT`, `BROWSER`, `MODEL`, `RUN_ID`, `RUN_DIR`, `CHARTER`
+- `qa.local.json` (gitignored): `{ "site", "agent", "browser", "model" }`
+- charter frontmatter: `defaultModel`, `defaultBrowser`
 
 Copy `qa.local.json.example` to `qa.local.json` and edit once per machine.
 

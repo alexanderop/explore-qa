@@ -32,11 +32,10 @@ available):
 2. **Hendrickson mission**: Target / Resources / Information-Discovery. Help
    the user cast it into `Explore <X> with <Y> to discover <Z>`.
 3. **Slug** (kebab-case, short, e.g. `search-mobile-full`, `nav-mobile`).
-4. **Time box / maxTurns** — smoke ~10, focused ~25–40, full-exploratory ~80–100.
-5. **Areas** (3–6 components or data flows touched — Bach Test Coverage Outline).
-6. **Risks + oracles** (3–5 lines, one risk → one observable symptom).
-7. **Scenarios** (4–8 guidance bullets — not step-by-step scripts).
-8. **Out of scope** — explicit, what is *not* tested.
+4. **Areas** (3–6 components or data flows touched — Bach Test Coverage Outline).
+5. **Risks + oracles** (3–5 lines, one risk → one observable symptom).
+6. **Scenarios** (4–8 guidance bullets — not step-by-step scripts).
+7. **Out of scope** — explicit, what is *not* tested.
 
 If the user says "just do it", read an existing charter in `charters/` as a
 model and propose a default — **but confirm before writing**.
@@ -80,7 +79,6 @@ Respond with a `## New Charter Summary` block:
 **File:** `charters/<slug>.md`
 **Mission:** Explore <X> with <Y> to discover <Z>.
 **Areas:** <comma-separated>
-**Time box:** maxTurns=<N>
 **Out of scope:** <short>
 
 **Next steps:**

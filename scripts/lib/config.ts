@@ -11,7 +11,6 @@ export type LocalConfig = {
   agent?: Agent;
   browser?: Browser;
   model?: string;
-  maxTurns?: number;
 };
 
 export async function loadLocalConfig(): Promise<LocalConfig> {
@@ -24,7 +23,6 @@ export async function loadLocalConfig(): Promise<LocalConfig> {
     if (typeof parsed.browser === "string" && isBrowser(parsed.browser))
       out.browser = parsed.browser;
     if (typeof parsed.model === "string") out.model = parsed.model;
-    if (typeof parsed.maxTurns === "number") out.maxTurns = parsed.maxTurns;
     return out;
   } catch {
     return {};

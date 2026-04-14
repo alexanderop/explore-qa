@@ -19,9 +19,9 @@ export type RunSettings = {
   browser: Browser;
   site: string;
   model?: string;
-  maxTurns?: number;
   runId?: string;
   runDir?: string;
+  dryRun?: boolean;
 };
 
 export async function resolveRunSettings(opts: {
@@ -32,6 +32,7 @@ export async function resolveRunSettings(opts: {
   charterMeta: CharterMeta;
   env?: Record<string, string | undefined>;
   localConfig?: LocalConfig;
+  dryRun?: boolean;
 }): Promise<RunSettings> {
   const env = opts.env ?? process.env;
   const local = opts.localConfig ?? (await loadLocalConfig());
@@ -59,9 +60,9 @@ export async function resolveRunSettings(opts: {
     browser: browserRaw,
     site,
     model: env.MODEL ?? local.model,
-    maxTurns: env.MAX_TURNS ? Number(env.MAX_TURNS) : local.maxTurns,
     runId: env.RUN_ID,
     runDir: env.RUN_DIR,
+    dryRun: opts.dryRun,
   };
 }
 
@@ -89,7 +90,6 @@ export async function runCharter(settings: RunSettings): Promise<number> {
   });
 
   const model = settings.model ?? composed.meta.defaultModel[settings.agent] ?? "claude-opus-4-6";
-  const maxTurns = settings.maxTurns ?? composed.meta.defaultMaxTurns;
 
   const sessionLog = `${paths.logDir}/${settings.agent}-session.jsonl`;
 
@@ -107,9 +107,18 @@ export async function runCharter(settings: RunSettings): Promise<number> {
     runId: paths.runId,
     logDir: paths.logDir,
     model,
-    maxTurns,
     browser: settings.browser,
   });
+
+  if (settings.dryRun) {
+    console.log("\n--- SYSTEM PROMPT ---\n");
+    console.log(composed.systemPrompt);
+    console.log("\n--- PROMPT ---\n");
+    console.log(composed.prompt);
+    console.log("\n--- INVOCATION ---\n");
+    console.log(JSON.stringify({ cmd: inv.cmd, args: inv.args, cwd: inv.cwd }, null, 2));
+    return 0;
+  }
 
   const exitCode = await runWithTee(inv, sessionLog);
   const endMs = Date.now();
@@ -152,9 +161,15 @@ export async function runCharter(settings: RunSettings): Promise<number> {
 }
 
 if (import.meta.main) {
-  const charterArg = process.argv[2] ?? process.env.CHARTER;
+  const rawArgs = process.argv.slice(2);
+  const dryRun = rawArgs.includes("--dry-run");
+  const positional = rawArgs.filter((a) => !a.startsWith("--"));
+
+  const charterArg = positional[0] ?? process.env.CHARTER;
   if (!charterArg) {
-    console.error("Usage: bun scripts/run-charter.ts <charter-name> [agent] [browser] [site]");
+    console.error(
+      "Usage: bun scripts/run-charter.ts <charter-name> [agent] [browser] [site] [--dry-run]",
+    );
     console.error(`Agents:   ${AGENTS.join(" | ")}`);
     console.error(`Browsers: ${BROWSERS.join(" | ")}`);
     process.exit(1);
@@ -163,10 +178,11 @@ if (import.meta.main) {
   const { meta: charterMeta } = await loadCharter(charterArg);
   const settings = await resolveRunSettings({
     charter: charterArg,
-    cliAgent: process.argv[3],
-    cliBrowser: process.argv[4],
-    cliSite: process.argv[5],
+    cliAgent: positional[1],
+    cliBrowser: positional[2],
+    cliSite: positional[3],
     charterMeta,
+    dryRun,
   });
 
   const exitCode = await runCharter(settings);

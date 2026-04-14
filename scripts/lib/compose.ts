@@ -8,7 +8,6 @@ export type CharterMeta = {
   runRoot: string;
   artifact: string;
   defaultModel: Partial<Record<Agent, string>>;
-  defaultMaxTurns: number;
   defaultBrowser?: Browser;
   includeFragments: string[];
 };
@@ -111,7 +110,6 @@ export function parseFrontmatter(raw: string): { meta: CharterMeta; body: string
     runRoot: String(out.runRoot ?? "qa-runs"),
     artifact: String(out.artifact ?? "report.md"),
     defaultModel: (out.defaultModel as Partial<Record<Agent, string>>) ?? {},
-    defaultMaxTurns: Number(out.defaultMaxTurns ?? 100),
     defaultBrowser:
       rawDefaultBrowser && isBrowser(rawDefaultBrowser) ? rawDefaultBrowser : undefined,
     includeFragments: Array.isArray(out.includeFragments) ? (out.includeFragments as string[]) : [],
