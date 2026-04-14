@@ -16,23 +16,23 @@ a QA engineer a mission statement and a browser.
 If you've done session-based exploratory testing, this is the same loop —
 just with an LLM agent in the tester seat:
 
-```
-   YOU                       EXPLORE-QA                    AGENT + BROWSER
- ┌──────┐  charter +     ┌──────────────┐   prompt    ┌────────────────────┐
- │ Pick │  site profile  │   compose    │  ────────►  │  claude / codex /  │
- │ a    │ ─────────────► │  (prompt     │             │  copilot           │
- │ test │                │   builder)   │             │         │          │
- │ goal │                └──────────────┘             │         ▼          │
- └──────┘                       ▲                     │  agent-browser /   │
-    ▲                           │                     │  playwright-cli    │
-    │                           │ brain               │         │          │
-    │                           │ (principles +       │         ▼          │
-    │                           │  past findings)     │   real website     │
-    │                                                 └────────────────────┘
-    │                                                          │
-    │                                                          ▼
-    │                                                   report.md +
-    └────────────  read & triage  ◄──────────────────   screenshots
+```mermaid
+flowchart LR
+    you([YOU: pick a test goal])
+    charter[charter + site profile]
+    compose[compose<br/>prompt builder]
+    brain[(brain:<br/>principles +<br/>past findings)]
+    agent[claude / codex / copilot]
+    browser[agent-browser /<br/>playwright-cli]
+    site[(real website)]
+    report[report.md +<br/>screenshots]
+
+    you --> charter --> compose
+    brain --> compose
+    compose -- prompt --> agent
+    agent --> browser --> site
+    site --> report
+    report -- read & triage --> you
 ```
 
 You write the **charter** (the mission). The harness builds the **prompt**.
@@ -78,28 +78,32 @@ with your own via `/onboard-site`.
 
 What goes into one run:
 
-```
-                INPUTS                              OUTPUTS
+```mermaid
+flowchart LR
+    subgraph INPUTS
+        c[charters/&lt;charter&gt;.md<br/>the mission]
+        s[sites/&lt;site&gt;.md<br/>baseUrl, journeys, quirks]
+        p[prompts/_*.md<br/>system rules, honesty,<br/>browser workflow]
+        bc[brain/_core/<br/>generic QA principles]
+        bs[brain/sites/&lt;site&gt;/<br/>per-site findings]
+    end
 
-  charters/<charter>.md  ──┐
-  (the mission)            │
-                           │
-  sites/<site>.md  ────────┤
-  (baseUrl, journeys,      │
-   known quirks)           │
-                           ├──►  compose.ts  ──►  agent CLI  ──►  qa-runs/
-  prompts/_*.md  ──────────┤    (builds the      (claude/         charters/
-  (system rules,           │     full prompt)     codex/           <charter>/
-   honesty checks,         │                      copilot)         _attachments/
-   browser workflow)       │           │                            <runId>/
-                           │           ▼                            ├─ report.md
-  brain/_core/  ───────────┤      systemPrompt                      ├─ screenshots/
-  (generic QA              │      + userPrompt                      └─ logs/
-   principles)             │           │                                ├─ <agent>-
-                           │           ▼                                │  session
-  brain/sites/<site>/  ────┘      browser CLI                           │  .jsonl
-  (per-site findings,             (agent-browser /                      └─ excerpts
-   gitignored)                     playwright-cli)
+    compose[compose.ts<br/>builds full prompt]
+    sp[systemPrompt<br/>+ userPrompt]
+    agent[agent CLI<br/>claude / codex / copilot]
+    browser[browser CLI<br/>agent-browser / playwright-cli]
+
+    subgraph OUTPUTS
+        runs[qa-runs/charters/&lt;charter&gt;/<br/>_attachments/&lt;runId&gt;/<br/>├─ report.md<br/>├─ screenshots/<br/>└─ logs/ session.jsonl]
+    end
+
+    c --> compose
+    s --> compose
+    p --> compose
+    bc --> compose
+    bs --> compose
+    compose --> sp --> agent --> browser
+    agent --> runs
 ```
 
 Seven moving parts:
@@ -128,23 +132,19 @@ Seven moving parts:
 
 ### Lifecycle of a charter run
 
-```
-  bun scripts/qa.ts <charter> <agent> <browser> <site>
-        │
-        ▼
-  ┌────────────────────────────────────────────────────────────┐
-  │ 1. resolve settings  (CLI > env > qa.local.json > charter) │
-  │ 2. compose prompt    (fragments + site + brain)            │
-  │ 3. mkdir runDir      qa-runs/.../<runId>/                  │
-  │ 4. spawn agent CLI   with allowlist for the browser tool   │
-  │ 5. agent loops:      browse → observe → screenshot → note  │
-  │ 6. agent writes      report.md (SBTM + PROOF shape)        │
-  │ 7. harness captures  full session log → logs/              │
-  └────────────────────────────────────────────────────────────┘
-        │
-        ▼
-  You read report.md, triage findings, optionally run /reflect
-  to fold new learnings into brain/sites/<site>/.
+```mermaid
+flowchart TD
+    cmd["bun scripts/qa.ts &lt;charter&gt; &lt;agent&gt; &lt;browser&gt; &lt;site&gt;"]
+    s1[1. resolve settings<br/>CLI &gt; env &gt; qa.local.json &gt; charter]
+    s2[2. compose prompt<br/>fragments + site + brain]
+    s3[3. mkdir runDir<br/>qa-runs/.../&lt;runId&gt;/]
+    s4[4. spawn agent CLI<br/>with allowlist for browser tool]
+    s5[5. agent loops<br/>browse → observe → screenshot → note]
+    s6[6. agent writes report.md<br/>SBTM + PROOF shape]
+    s7[7. harness captures<br/>full session log → logs/]
+    done[You read report.md, triage findings,<br/>optionally run /reflect to fold learnings<br/>into brain/sites/&lt;site&gt;/]
+
+    cmd --> s1 --> s2 --> s3 --> s4 --> s5 --> s6 --> s7 --> done
 ```
 
 Per run, artifacts land under `qa-runs/charters/<charter>/_attachments/<runId>/`:
