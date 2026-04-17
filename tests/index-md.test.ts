@@ -18,6 +18,7 @@ const fm: RunFrontmatter = {
   duration_hms: "00:04:47",
   status: "findings",
   findings: 3,
+  promptHash: "a3f8c2e91b04",
 };
 
 describe("applyFrontmatter", () => {
@@ -35,6 +36,11 @@ describe("applyFrontmatter", () => {
     expect(matches.length).toBe(2);
     expect(twice).toContain("findings: 5");
     expect(twice).not.toContain("findings: 3");
+  });
+
+  test("serializes promptHash into frontmatter", () => {
+    const out = applyFrontmatter("# Report\n", fm);
+    expect(out).toContain("promptHash: a3f8c2e91b04");
   });
 });
 
@@ -85,5 +91,6 @@ describe("buildIndexRow", () => {
     );
     expect(row).toContain("findings");
     expect(row).toContain("| 3 |");
+    expect(row).toContain("| a3f8c2 |");
   });
 });

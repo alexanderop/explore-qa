@@ -66,4 +66,37 @@ describe("composePrompt", () => {
     // but substitution still works
     expect(c.prompt).toContain("definitely-not-a-real-site");
   });
+
+  test("promptHash is a 12-char hex string", async () => {
+    const c = await composePrompt("example-smoke", ctx("agent-browser"));
+    expect(c.promptHash).toMatch(/^[0-9a-f]{12}$/);
+  });
+
+  test("manifest contains expected fragment names", async () => {
+    const c = await composePrompt("example-smoke", ctx("agent-browser"));
+    const names = c.manifest.map((f) => f.name);
+    expect(names).toContain("charter:example-smoke");
+    expect(names).toContain("_system");
+    expect(names).toContain("_honesty-checks");
+    expect(names).toContain("site:example");
+    expect(names).toContain("brain:_core");
+    for (const entry of c.manifest) {
+      expect(entry.hash).toMatch(/^[0-9a-f]{8}$/);
+    }
+  });
+
+  test("same inputs produce the same hash (deterministic)", async () => {
+    const a = await composePrompt("example-smoke", ctx("agent-browser"));
+    const b = await composePrompt("example-smoke", ctx("agent-browser"));
+    expect(a.promptHash).toBe(b.promptHash);
+  });
+
+  test("changing site produces a different hash", async () => {
+    const a = await composePrompt("example-smoke", ctx("agent-browser", "claude", "example"));
+    const b = await composePrompt(
+      "example-smoke",
+      ctx("agent-browser", "claude", "definitely-not-a-real-site"),
+    );
+    expect(a.promptHash).not.toBe(b.promptHash);
+  });
 });

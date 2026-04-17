@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { Agent } from "./agents.ts";
@@ -23,10 +24,14 @@ type ComposeContext = {
   reportPath: string;
 };
 
+export type FragmentEntry = { name: string; hash: string };
+
 type ComposedPrompt = {
   meta: CharterMeta;
   prompt: string;
   systemPrompt: string;
+  promptHash: string;
+  manifest: FragmentEntry[];
 };
 
 const REPO_ROOT = new URL("../..", import.meta.url).pathname;
@@ -153,17 +158,27 @@ export async function loadCharter(name: string): Promise<{ meta: CharterMeta; bo
   return parseFrontmatter(raw);
 }
 
+function hashContent(content: string): string {
+  return createHash("sha256").update(content).digest("hex").slice(0, 8);
+}
+
 export async function composePrompt(
   charterName: string,
   ctx: ComposeContext,
 ): Promise<ComposedPrompt> {
+  const manifest: FragmentEntry[] = [];
+  const track = (name: string, content: string): string => {
+    manifest.push({ name, hash: hashContent(content) });
+    return content;
+  };
+
   const { meta, body } = await loadCharter(charterName);
 
-  const charterBody = substitute(body, ctx);
+  const charterBody = track(`charter:${charterName}`, substitute(body, ctx));
 
   const fragmentParts: string[] = [];
   for (const fragment of meta.includeFragments) {
-    const text = substitute(await readFragment(fragment), ctx);
+    const text = track(`frag:${fragment}`, substitute(await readFragment(fragment), ctx));
     fragmentParts.push(text);
   }
 
@@ -171,14 +186,22 @@ export async function composePrompt(
     .filter(Boolean)
     .join("\n\n");
 
-  const systemBase = substitute(await readFragment("_system"), ctx);
-  const honesty = substitute(await readFragment("_honesty-checks"), ctx);
+  const systemBase = track("_system", substitute(await readFragment("_system"), ctx));
+  const honesty = track("_honesty-checks", substitute(await readFragment("_honesty-checks"), ctx));
   const siteProfile = substitute(await readSiteProfile(ctx.site), ctx);
+  if (siteProfile.trim()) track(`site:${ctx.site}`, siteProfile);
   const brainCore = substitute(await readBrainCore(), ctx);
+  if (brainCore.trim()) track("brain:_core", brainCore);
 
   const systemPrompt = [systemBase.trim(), honesty.trim(), siteProfile.trim(), brainCore.trim()]
     .filter(Boolean)
     .join("\n\n");
 
-  return { meta, prompt, systemPrompt };
+  const promptHash = createHash("sha256")
+    .update(prompt)
+    .update(systemPrompt)
+    .digest("hex")
+    .slice(0, 12);
+
+  return { meta, prompt, systemPrompt, promptHash, manifest };
 }

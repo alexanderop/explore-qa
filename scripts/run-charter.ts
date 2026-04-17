@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AGENTS, type Agent, buildInvocation, isAgent } from "./lib/agents.ts";
 import { BROWSERS, type Browser, isBrowser } from "./lib/browsers.ts";
 import { type CharterMeta, composePrompt, loadCharter } from "./lib/compose.ts";
@@ -91,6 +91,11 @@ export async function runCharter(settings: RunSettings): Promise<number> {
 
   const model = settings.model ?? composed.meta.defaultModel[settings.agent] ?? "claude-opus-4-6";
 
+  await writeFile(
+    `${paths.logDir}/prompt-manifest.json`,
+    JSON.stringify({ promptHash: composed.promptHash, fragments: composed.manifest }, null, 2),
+  );
+
   const sessionLog = `${paths.logDir}/${settings.agent}-session.jsonl`;
 
   const startMs = Date.now();
@@ -111,6 +116,9 @@ export async function runCharter(settings: RunSettings): Promise<number> {
   });
 
   if (settings.dryRun) {
+    console.log(`\n--- PROMPT HASH: ${composed.promptHash} ---\n`);
+    console.log("--- MANIFEST ---\n");
+    for (const f of composed.manifest) console.log(`  ${f.hash}  ${f.name}`);
     console.log("\n--- SYSTEM PROMPT ---\n");
     console.log(composed.systemPrompt);
     console.log("\n--- PROMPT ---\n");
@@ -144,6 +152,7 @@ export async function runCharter(settings: RunSettings): Promise<number> {
     duration_hms: fmtHMS(durationSec),
     status: exitCode !== 0 ? "error" : findings > 0 ? "findings" : "pass",
     findings,
+    promptHash: composed.promptHash,
   };
 
   try {

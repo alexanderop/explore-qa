@@ -94,7 +94,7 @@ flowchart LR
     browser[browser CLI<br/>agent-browser / playwright-cli]
 
     subgraph OUTPUTS
-        runs[qa-runs/charters/&lt;charter&gt;/<br/>_attachments/&lt;runId&gt;/<br/>├─ report.md<br/>├─ screenshots/<br/>└─ logs/ session.jsonl]
+        runs[qa-runs/charters/&lt;charter&gt;/<br/>_attachments/&lt;runId&gt;/<br/>├─ report.md<br/>├─ screenshots/<br/>└─ logs/ session.jsonl<br/>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;prompt-manifest.json]
     end
 
     c --> compose
@@ -124,6 +124,8 @@ Seven moving parts:
 5. **`scripts/lib/compose.ts`** — loads the charter, parses frontmatter,
    substitutes `{{site}}` / `{{browser}}` / `{{runDir}}` / etc., concatenates
    fragments + site profile + core brain into `{ prompt, systemPrompt, meta }`.
+   Also computes a `promptHash` and per-fragment `manifest` for regression
+   tracking.
 6. **`scripts/lib/agents.ts`** — switch over `claude` | `codex` | `copilot` that
    builds the right CLI invocation. Add new backends here only.
 7. **`scripts/lib/browsers.ts`** — switch over `agent-browser` | `playwright-cli`
@@ -151,7 +153,67 @@ Per run, artifacts land under `qa-runs/charters/<charter>/_attachments/<runId>/`
 
 - `report.md` / `result.md` — the agent-authored report
 - `screenshots/` — named `<scenario>_<step>_<desc>.png`
-- `logs/` — selective excerpts + full `<agent>-session.jsonl`
+- `logs/` — selective excerpts + full `<agent>-session.jsonl` +
+  `prompt-manifest.json` (prompt fingerprint for regression tracking)
+
+## Prompt versioning & regression tracking
+
+Every run fingerprints the full composed prompt so you can tell whether a
+difference in results comes from a prompt change, a site change, or agent
+variance.
+
+**What gets recorded:**
+
+- **`promptHash`** (12-char sha256) — stored in the report frontmatter and the
+  `qa-runs/README.md` index table. Same hash = identical prompt inputs.
+- **`prompt-manifest.json`** — written to `logs/` alongside the session log.
+  Lists each fragment that went into the prompt with its own 8-char hash:
+
+  ```json
+  {
+    "promptHash": "134ed35118be",
+    "fragments": [
+      { "name": "charter:example-smoke", "hash": "a1458b34" },
+      { "name": "frag:_browser-workflow", "hash": "a3deabf2" },
+      { "name": "_system",               "hash": "ea6cedc8" },
+      { "name": "_honesty-checks",       "hash": "8da638c7" },
+      { "name": "site:example",          "hash": "d1248e95" },
+      { "name": "brain:_core",           "hash": "147e5f93" }
+    ]
+  }
+  ```
+
+**Comparing two runs:**
+
+```bash
+bun scripts/compare-runs.ts \
+  qa-runs/charters/smoke/2026-04-14_claude_agent-browser.md \
+  qa-runs/charters/smoke/2026-04-17_claude_agent-browser.md
+```
+
+Output:
+
+```
+=== Prompt Changes ===
+  promptHash: a3f8c2e91b04 -> b7d1e5f29c38
+  Changed fragments: _honesty-checks
+
+=== Results Delta ===
+  Duration:  244s -> 310s  (+27%)
+  Findings:  1 -> 3
+  Status:    findings -> findings
+
+=== Findings Diff ===
+  Both runs:  F-01 Cart icon badge missing
+  New in B:   F-02 Console 404 on /api/tracking; F-03 Viewport overflow
+
+=== Verdict ===
+  Prompt changed. Review changed fragments to assess impact.
+```
+
+**Dry-run preview:** `bun scripts/run-charter.ts <charter> --dry-run` prints
+the prompt hash, manifest, full prompt, and CLI invocation without spawning an
+agent.
 
 ## Skills
 

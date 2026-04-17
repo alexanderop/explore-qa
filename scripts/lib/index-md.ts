@@ -12,6 +12,7 @@ export type RunFrontmatter = {
   duration_hms: string;
   status: "pass" | "findings" | "error";
   findings: number;
+  promptHash: string;
 };
 
 const FM_OPEN = "---\n";
@@ -29,6 +30,7 @@ function serializeFrontmatter(fm: RunFrontmatter): string {
     `duration_hms: "${fm.duration_hms}"`,
     `status: ${fm.status}`,
     `findings: ${fm.findings}`,
+    `promptHash: ${fm.promptHash}`,
   ];
   return `${FM_OPEN}${lines.join("\n")}${FM_CLOSE}\n`;
 }
@@ -89,15 +91,16 @@ const INDEX_HEADER = [
   "",
   "Übersicht aller Runs. Vom Runner gepflegt — neueste Zeile zuerst.",
   "",
-  "| Datum | Zeit | Charter | Agent | Browser | Dauer | Status | Findings | Report |",
-  "|---|---|---|---|---|---|---|---|---|",
+  "| Datum | Zeit | Charter | Agent | Browser | Dauer | Status | Findings | Prompt | Report |",
+  "|---|---|---|---|---|---|---|---|---|---|",
   "",
 ].join("\n");
 
 export function buildIndexRow(fm: RunFrontmatter, indexPath: string, reportPath: string): string {
   const rel = relative(dirname(indexPath), reportPath);
   const shortTime = fm.time.slice(0, 5);
-  return `| ${fm.date} | ${shortTime} | ${fm.charter} | ${fm.agent} | ${fm.browser} | ${fm.duration_hms} | ${fm.status} | ${fm.findings} | [↗](${rel}) |`;
+  const shortHash = fm.promptHash.slice(0, 6);
+  return `| ${fm.date} | ${shortTime} | ${fm.charter} | ${fm.agent} | ${fm.browser} | ${fm.duration_hms} | ${fm.status} | ${fm.findings} | ${shortHash} | [↗](${rel}) |`;
 }
 
 export function insertIndexRow(existing: string, row: string): string {
