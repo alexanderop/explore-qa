@@ -11,10 +11,10 @@ browser CLIs have different subcommands and flag names; do not guess them.
 
 ## Setup
 
-Unless the charter specifies otherwise, run all scenarios in a **mobile viewport
-(iPhone 15 Pro)**. If your browser tool does not already preconfigure that via
-environment variables (check `--help`), set the viewport explicitly at the start
-of the session.
+Unless the charter specifies otherwise, run all scenarios in a **{{device}}
+viewport**. If your browser tool does not already preconfigure that via
+environment variables (check `--help`), set the viewport explicitly at the
+start of the session.
 
 ## Per-step workflow
 

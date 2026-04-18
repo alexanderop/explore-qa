@@ -28,6 +28,36 @@ async function listMarkdown(dir: string): Promise<string[]> {
 const listCharters = () => listMarkdown(CHARTER_DIR);
 const listSites = () => listMarkdown(SITES_DIR);
 
+function printHelp(): void {
+  console.log(`qa - explore-qa harness runner
+
+Usage: qa [charter] [agent] [browser] [site]
+   or: bun scripts/qa.ts [charter] [agent] [browser] [site]
+
+Interactive:
+  qa                      Launch wizard (pick charter/agent/browser/site)
+
+Non-interactive (positional args):
+  charter   Charter name from charters/ (without .md)
+  agent     ${AGENTS.join(" | ")}
+  browser   ${BROWSERS.join(" | ")}
+  site      Site profile from sites/ (without .md)
+
+Options:
+  -l, --list      List available charters, sites, agents, and browsers
+  -h, --help      Show this help
+
+Examples:
+  qa
+  qa --list
+  qa example-smoke claude agent-browser example
+
+Install:
+  Run \`bun link\` once inside this fork to expose \`qa\` globally. Without
+  linking, use \`bun scripts/qa.ts\` instead.
+`);
+}
+
 async function printList(): Promise<void> {
   const [charters, sites] = await Promise.all([listCharters(), listSites()]);
   console.log("\nSites:");
@@ -108,16 +138,18 @@ async function wizard(): Promise<void> {
     console.log(`Agent:     ${agent}`);
     console.log(`Browser:   ${browser}`);
     console.log(`Model:     ${model}`);
-    console.log(`\nDirect next time: bun scripts/qa.ts ${charter} ${agent} ${browser} ${site}`);
+    console.log(`\nDirect next time: qa ${charter} ${agent} ${browser} ${site}`);
     console.log();
 
-    const exitCode = await runCharter({
+    const settings = await resolveRunSettings({
       charter,
-      agent,
-      browser,
-      site,
-      model,
+      cliAgent: agent,
+      cliBrowser: browser,
+      cliSite: site,
+      charterMeta: meta,
+      localConfig: local,
     });
+    const exitCode = await runCharter({ ...settings, model });
     if (exitCode !== 0) process.exit(exitCode);
   } finally {
     rl.close();
@@ -125,6 +157,11 @@ async function wizard(): Promise<void> {
 }
 
 const args = process.argv.slice(2);
+
+if (args.includes("--help") || args.includes("-h")) {
+  printHelp();
+  process.exit(0);
+}
 
 if (args.includes("--list") || args.includes("-l")) {
   await printList();

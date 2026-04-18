@@ -45,12 +45,6 @@ describe("composePrompt", () => {
     expect(c.systemPrompt).toContain("Absence burden of proof");
   });
 
-  test("system prompt inlines brain/_core/index.md", async () => {
-    const c = await composePrompt("example-smoke", ctx("agent-browser"));
-    expect(c.systemPrompt).toContain("Brain (core principles)");
-    expect(c.systemPrompt).toContain("principles/exploratory-not-checklist");
-  });
-
   test("system prompt inlines the active site profile when present", async () => {
     const c = await composePrompt("example-smoke", ctx("agent-browser"));
     expect(c.systemPrompt).toContain("Site Profile");
@@ -79,7 +73,6 @@ describe("composePrompt", () => {
     expect(names).toContain("_system");
     expect(names).toContain("_honesty-checks");
     expect(names).toContain("site:example");
-    expect(names).toContain("brain:_core");
     for (const entry of c.manifest) {
       expect(entry.hash).toMatch(/^[0-9a-f]{8}$/);
     }
@@ -98,5 +91,24 @@ describe("composePrompt", () => {
       ctx("agent-browser", "claude", "definitely-not-a-real-site"),
     );
     expect(a.promptHash).not.toBe(b.promptHash);
+  });
+
+  test("{{device}} resolves from the site viewport frontmatter", async () => {
+    const exampleRun = await composePrompt(
+      "example-smoke",
+      ctx("agent-browser", "claude", "example"),
+    );
+    expect(exampleRun.prompt).toContain("agent-browser / iPhone 15 Pro");
+
+    const ottoRun = await composePrompt("example-smoke", ctx("agent-browser", "claude", "otto"));
+    expect(ottoRun.prompt).toContain("agent-browser / Desktop 1440x900");
+  });
+
+  test("{{device}} falls back to iPhone 15 Pro when the site profile is missing", async () => {
+    const c = await composePrompt(
+      "example-smoke",
+      ctx("agent-browser", "claude", "definitely-not-a-real-site"),
+    );
+    expect(c.prompt).toContain("agent-browser / iPhone 15 Pro");
   });
 });

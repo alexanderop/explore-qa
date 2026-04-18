@@ -11,6 +11,7 @@ import {
   type RunFrontmatter,
 } from "./lib/index-md.ts";
 import { fmtHMS, humanStamp, pad, QA_RUNS_ROOT, resolveRunPaths } from "./lib/paths.ts";
+import { generateReplay } from "./lib/replay/generate.ts";
 import { runWithTee } from "./lib/run.ts";
 
 export type RunSettings = {
@@ -22,7 +23,11 @@ export type RunSettings = {
   runId?: string;
   runDir?: string;
   dryRun?: boolean;
+  timeoutSec: number;
+  noReplay?: boolean;
 };
+
+const DEFAULT_TIMEOUT_SEC = 1800;
 
 export async function resolveRunSettings(opts: {
   charter: string;
@@ -54,6 +59,12 @@ export async function resolveRunSettings(opts: {
 
   const site = opts.cliSite ?? env.SITE ?? local.site ?? "example";
 
+  const envTimeout = env.TIMEOUT_SEC ? Number(env.TIMEOUT_SEC) : undefined;
+  const timeoutSec =
+    envTimeout !== undefined && Number.isFinite(envTimeout)
+      ? envTimeout
+      : (local.timeoutSec ?? DEFAULT_TIMEOUT_SEC);
+
   return {
     charter: opts.charter,
     agent: agentRaw,
@@ -63,6 +74,7 @@ export async function resolveRunSettings(opts: {
     runId: env.RUN_ID,
     runDir: env.RUN_DIR,
     dryRun: opts.dryRun,
+    timeoutSec,
   };
 }
 
@@ -103,7 +115,7 @@ export async function runCharter(settings: RunSettings): Promise<number> {
     `Site: ${settings.site} | Charter: ${settings.charter} | Agent: ${settings.agent} | Browser: ${settings.browser} | Model: ${model}`,
   );
   console.log(`Run: ${paths.runDir}`);
-  console.log(`Start: ${humanStamp(new Date(startMs))}`);
+  console.log(`Start: ${humanStamp(new Date(startMs))} | Timeout: ${settings.timeoutSec}s`);
 
   const inv = await buildInvocation(settings.agent, {
     prompt: composed.prompt,
@@ -128,16 +140,21 @@ export async function runCharter(settings: RunSettings): Promise<number> {
     return 0;
   }
 
-  const exitCode = await runWithTee(inv, sessionLog);
+  const exitCode = await runWithTee(inv, sessionLog, settings.timeoutSec * 1000);
   const endMs = Date.now();
   const durationSec = Math.floor((endMs - startMs) / 1000);
 
   let findings = 0;
+  let reportMissing = false;
   try {
     const body = await readFile(paths.reportPath, "utf8");
-    findings = parseFindingsCount(body);
+    if (body.trim().length === 0) {
+      reportMissing = true;
+    } else {
+      findings = parseFindingsCount(body);
+    }
   } catch {
-    findings = 0;
+    reportMissing = true;
   }
 
   const startDate = new Date(startMs);
@@ -150,7 +167,7 @@ export async function runCharter(settings: RunSettings): Promise<number> {
     time: `${pad(startDate.getHours())}:${pad(startDate.getMinutes())}:${pad(startDate.getSeconds())}`,
     duration_s: durationSec,
     duration_hms: fmtHMS(durationSec),
-    status: exitCode !== 0 ? "error" : findings > 0 ? "findings" : "pass",
+    status: exitCode !== 0 || reportMissing ? "error" : findings > 0 ? "findings" : "pass",
     findings,
     promptHash: composed.promptHash,
   };
@@ -160,6 +177,28 @@ export async function runCharter(settings: RunSettings): Promise<number> {
     await appendToIndex(`./${QA_RUNS_ROOT}/README.md`, fm, paths.reportPath);
   } catch (err) {
     console.error(`Warning: could not write frontmatter/index: ${(err as Error).message}`);
+  }
+
+  if (!settings.noReplay) {
+    try {
+      const { body: charterBody } = await loadCharter(settings.charter);
+      const replayPath = await generateReplay({
+        runDir: paths.runDir,
+        logDir: paths.logDir,
+        screenshotDir: paths.screenshotDir,
+        reportPath: paths.reportPath,
+        charter: settings.charter,
+        charterBody,
+        runId: paths.runId,
+        agent: settings.agent,
+        browser: settings.browser,
+        site: settings.site,
+        frontmatter: fm,
+      });
+      console.log(`Replay: ${replayPath}`);
+    } catch (err) {
+      console.error(`Warning: could not generate replay.html: ${(err as Error).message}`);
+    }
   }
 
   console.log(`Report: ${paths.reportPath}`);
@@ -172,12 +211,13 @@ export async function runCharter(settings: RunSettings): Promise<number> {
 if (import.meta.main) {
   const rawArgs = process.argv.slice(2);
   const dryRun = rawArgs.includes("--dry-run");
+  const noReplay = rawArgs.includes("--no-replay");
   const positional = rawArgs.filter((a) => !a.startsWith("--"));
 
   const charterArg = positional[0] ?? process.env.CHARTER;
   if (!charterArg) {
     console.error(
-      "Usage: bun scripts/run-charter.ts <charter-name> [agent] [browser] [site] [--dry-run]",
+      "Usage: bun scripts/run-charter.ts <charter-name> [agent] [browser] [site] [--dry-run] [--no-replay]",
     );
     console.error(`Agents:   ${AGENTS.join(" | ")}`);
     console.error(`Browsers: ${BROWSERS.join(" | ")}`);
@@ -193,6 +233,7 @@ if (import.meta.main) {
     charterMeta,
     dryRun,
   });
+  settings.noReplay = noReplay;
 
   const exitCode = await runCharter(settings);
   if (exitCode !== 0) process.exit(exitCode);

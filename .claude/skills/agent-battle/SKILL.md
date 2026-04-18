@@ -21,9 +21,9 @@ with a generous timeout (~10 min, `600000` ms). One Bash call per agent, run
 in parallel in a single message:
 
 ```bash
-bun scripts/qa.ts <charter> claude  agent-browser <site>
-bun scripts/qa.ts <charter> codex   agent-browser <site>
-bun scripts/qa.ts <charter> copilot agent-browser <site>
+qa <charter> claude  agent-browser <site>
+qa <charter> codex   agent-browser <site>
+qa <charter> copilot agent-browser <site>
 ```
 
 Tell the user in one sentence that all three are running. No tables, no todo
@@ -104,11 +104,72 @@ Once **all three** background tasks report `completed`:
    `qa-runs/charters/<charter>/<timestamp>_<agent>_agent-browser.md`
 3. From each report's frontmatter pull: `duration_s`, `findings`, `status`.
    Count screenshots in the matching `_attachments/.../screenshots/` folder.
-4. Post the **comparison report**:
-   - A Markdown table: Duration / Findings / Screenshots / Report substance per agent.
+   Also pull the first-finding severity + title from each report's summary
+   table row (`| F-01 | <Sev> | <Title> |`).
+4. **Write a persistent summary file** at
+   `qa-runs/charters/<charter>/<date>_battle-summary.md` (same date the three
+   runs share) using the template in *Summary file structure* below. Use
+   `Write`, not `Edit` — overwrite if it already exists for this date.
+5. Post the **comparison report** inline in chat:
+   - A Markdown table: Duration / Findings / Screenshots / Severity per agent.
    - One short paragraph per agent: strengths and weaknesses observed in the run.
    - A clear one-sentence verdict: which agent produced the most useful output
      for this charter and why.
+   - End with two lines pointing at the artefacts — the summary file and, if
+     the user wants a timeline visualisation, the `battle-playground` skill
+     (run `python3 .claude/skills/battle-playground/generate.py <charter> --open`).
+
+### Summary file structure
+
+```markdown
+---
+charter: <charter>
+date: <YYYY-MM-DD>
+agents: [claude, codex, copilot]
+verdict: <agent>
+---
+
+# Agent battle — <charter> — <date>
+
+## Comparison
+
+| agent   | duration | findings | shots | severity | report                                      |
+|---------|----------|----------|-------|----------|---------------------------------------------|
+| claude  | ...      | ...      | ...   | Minor    | [link](./<ts>_claude_agent-browser.md)      |
+| codex   | ...      | ...      | ...   | Minor    | [link](./<ts>_codex_agent-browser.md)       |
+| copilot | ...      | ...      | ...   | Major    | [link](./<ts>_copilot_agent-browser.md)     |
+
+## Findings by agent
+
+### claude — <Sev> — <Finding title>
+One or two sentences: what the finding is and why it matters.
+
+### codex — <Sev> — <Finding title>
+...
+
+### copilot — <Sev> — <Finding title>
+...
+
+## Observations per agent
+
+- **claude** — one short paragraph: how it approached the charter, what it
+  covered well, where it struggled or wandered.
+- **codex** — same.
+- **copilot** — same.
+
+## Verdict
+
+One paragraph naming the winner and explaining the reasoning against the
+evaluation axes (speed / substance / discipline / report quality / resilience).
+Then a one-line call-out of each loser's clearest strength so the reader
+knows when they would pick it instead.
+```
+
+The summary file is the durable artifact — it outlives the chat log and is
+what `reflect` and downstream tooling will read later. Keep it tight
+(under ~150 lines) and write the finding paragraphs from the **report
+bodies**, not from what you observed in the live session log — the report
+bodies are what the agent itself considered canonical.
 
 ## Evaluation axes (for the final verdict)
 

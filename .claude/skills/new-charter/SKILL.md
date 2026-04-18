@@ -55,7 +55,7 @@ model and propose a default — **but confirm before writing**.
 
 ## Validate
 
-- `bun scripts/qa.ts --list` → the new charter must appear; `_template` must not.
+- `qa --list` → the new charter must appear; `_template` must not.
 - `bun test` → the frontmatter parser must not crash.
 - **Do not auto-run** the new charter. That is the user's call.
 
@@ -83,6 +83,6 @@ Respond with a `## New Charter Summary` block:
 
 **Next steps:**
 - Review: `cat charters/<slug>.md`
-- Dry run: `bun scripts/qa.ts <slug> claude agent-browser <site>`
+- Dry run: `qa <slug> claude agent-browser <site>`
 - Commit when OK.
 ```

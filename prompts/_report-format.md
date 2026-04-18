@@ -13,7 +13,7 @@ SBTM (James & Jonathan Bach) + Jon Bach's PROOF debrief.
 - **Charter:** <one sentence: what was tested>
 - **Run ID:** {{runId}}
 - **Agent:** {{agent}}
-- **Browser/Device:** {{browser}} / iPhone 15 Pro
+- **Browser/Device:** {{browser}} / {{device}}
 - **Site:** {{site}}
 - **URL:** <tested URL>
 - **Date:** <YYYY-MM-DD>

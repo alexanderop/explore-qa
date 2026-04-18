@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{TITLE}}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --panel: #111114;
+    --panel-2: #17171c;
+    --border: #1f1f25;
+    --border-strong: #2a2a32;
+    --text: #e7e7ea;
+    --muted: #8b8b94;
+    --dim: #5a5a63;
+    --claude: #a78bfa;
+    --codex: #22d3ee;
+    --copilot: #f59e0b;
+    --bad: #f87171;
+    --warn: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+
+  header {
+    padding: 20px 32px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  header .meta { color: var(--muted); font-size: 12px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px; color: var(--muted); }
+
+  .sticky-wrap { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--border); }
+
+  .controls {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 32px; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  button.play { background: var(--text); color: var(--bg); border: 0;
+    padding: 5px 14px; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 12px; }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  button.ghost:hover { color: var(--text); border-color: var(--border-strong); }
+  .spacer { flex: 1; }
+  .clock { color: var(--muted); font-size: 11px; font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+  /* now-showing strip: 3 columns side-by-side */
+  .now {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 0; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .now-col {
+    padding: 10px 14px;
+    border-right: 1px solid var(--border);
+    min-width: 0;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .now-col:last-child { border-right: 0; }
+  .now-head {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; letter-spacing: 0.02em; color: var(--muted);
+  }
+  .now-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .now-agent { color: var(--text); font-weight: 600; font-size: 12px; }
+  .now-phase {
+    margin-left: auto; font-size: 10px; font-family: "JetBrains Mono", ui-monospace, monospace;
+    color: var(--muted); padding: 1px 6px; border-radius: 3px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  }
+  .now-event {
+    font-size: 12px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .now-kind {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px; color: var(--muted);
+    padding: 1px 5px; border-radius: 3px;
+    background: rgba(255,255,255,0.04);
+    margin-right: 6px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  .stage { padding: 16px 32px 40px; max-width: 1440px; margin: 0 auto; }
+
+  .lane { position: relative; margin: 12px 0;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--panel); overflow: hidden; }
+  .lane-header { display: flex; align-items: center; gap: 12px;
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+    background: var(--panel-2); }
+  .lane-name { font-weight: 600; font-size: 12px; }
+  .lane-model { color: var(--dim); font-size: 11px; font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .lane-dur { margin-left: auto; color: var(--muted); font-size: 11px; font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .lane-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  .milestone-row {
+    position: relative; height: 22px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.02), transparent);
+    border-bottom: 1px dashed var(--border);
+  }
+  .milestone {
+    position: absolute; top: 3px; transform: translateX(-50%);
+    font-size: 10px; font-family: "JetBrains Mono", ui-monospace, monospace;
+    color: var(--text); white-space: nowrap;
+    padding: 1px 6px; background: var(--panel-2);
+    border: 1px solid var(--border-strong); border-radius: 3px;
+    pointer-events: none; line-height: 1.3;
+  }
+  .milestone::after {
+    content: ""; position: absolute; left: 50%; top: 100%;
+    width: 1px; height: 44px; background: currentColor;
+    opacity: 0.22; margin-left: -0.5px;
+  }
+
+  .lane-track { position: relative; height: 44px;
+    background: repeating-linear-gradient(to right, transparent 0, transparent 59px, rgba(255,255,255,0.025) 59px, rgba(255,255,255,0.025) 60px); }
+  .progress { position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none;
+    transition: width 60ms linear; }
+  .playhead {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: rgba(255,255,255,0.55); pointer-events: none;
+    box-shadow: 0 0 8px rgba(255,255,255,0.35);
+    transition: left 60ms linear;
+    z-index: 4;
+  }
+  .event { position: absolute; top: 50%; transform: translate(-50%, -50%);
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--dim); border: 1px solid rgba(0,0,0,0.3);
+    cursor: pointer; transition: transform 120ms ease; }
+  .event:hover { transform: translate(-50%, -50%) scale(1.8); z-index: 5; }
+  .event.future { opacity: 0.22; }
+  .event[data-kind="think"] { background: #555; }
+  .event[data-kind="nav"]   { background: #3b82f6; }
+  .event[data-kind="act"]   { background: #10b981; }
+  .event[data-kind="inspect"] { background: #64748b; }
+  .event[data-kind="snap"]  { background: #8b5cf6; }
+  .event[data-kind="shot"]  { background: #ec4899; }
+  .event[data-kind="tool"]  { background: #6b7280; }
+  .event[data-kind="todo"]  { background: #f59e0b; }
+  .event[data-kind="write"] { background: #14b8a6; }
+  .event[data-kind="read"]  { background: #475569; }
+  .event[data-kind="done"]  { background: #34d399; width: 12px; height: 12px; }
+
+  .finding { padding: 8px 14px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .sev { font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 2px 7px; border-radius: 4px; }
+  .sev.Major { background: rgba(248,113,113,0.14); color: #f87171; border: 1px solid rgba(248,113,113,0.22); }
+  .sev.Minor { background: rgba(245,158,11,0.10); color: #f59e0b; border: 1px solid rgba(245,158,11,0.20); }
+
+  /* Disclosure */
+  .lane-more {
+    padding: 7px 14px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; color: var(--muted);
+    cursor: pointer; user-select: none;
+    background: transparent;
+  }
+  .lane-more:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+  .lane-more .caret { transition: transform 150ms; font-size: 9px; }
+  .lane.expanded .lane-more .caret { transform: rotate(90deg); }
+  .lane-details { display: none; }
+  .lane.expanded .lane-details { display: block; }
+
+  .moments { padding: 10px 14px; border-top: 1px solid var(--border); }
+  .moments-title {
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px; font-weight: 500;
+  }
+  .moment {
+    display: grid; grid-template-columns: 46px 1fr; gap: 10px;
+    padding: 4px 0; border-top: 1px solid var(--border);
+    font-size: 12px; cursor: pointer;
+  }
+  .moment:first-of-type { border-top: 0; }
+  .moment:hover { background: rgba(255,255,255,0.02); }
+  .moment-t {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px; color: var(--muted); padding-top: 1px;
+  }
+  .moment-q em {
+    font-style: normal; background: rgba(255,220,80,0.08);
+    padding: 0 2px; border-radius: 2px; color: #fde68a;
+  }
+
+  .shots { padding: 10px 14px 12px; border-top: 1px solid var(--border); }
+  .shots-title {
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px; font-weight: 500;
+  }
+  .shot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .shot {
+    display: block; position: relative;
+    border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+    background: var(--bg); text-decoration: none; color: var(--text);
+    transition: border-color 120ms, transform 120ms;
+  }
+  .shot:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .shot img { width: 100%; height: 80px; object-fit: cover; object-position: top center; display: block;
+    background: #1a1a1e; }
+  .shot-name { font-size: 10px; font-family: "JetBrains Mono", ui-monospace, monospace;
+    color: var(--muted); padding: 4px 6px; border-top: 1px solid var(--border);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Shared axis */
+  .axis-global {
+    position: relative; height: 18px; margin: 10px 4px 16px;
+    color: var(--dim); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px;
+  }
+  .axis-global .tick { position: absolute; transform: translateX(-50%); }
+
+  .detail {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    max-width: 760px; min-width: 420px; background: var(--panel-2);
+    border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 14px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.6); z-index: 20; display: none; }
+  .detail.show { display: block; }
+  .detail .row1 { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
+  .detail .kind { font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 2px 6px; border-radius: 3px; background: rgba(255,255,255,0.05); }
+  .detail .label { margin-top: 6px; font-size: 13px; color: var(--text); }
+  .detail .cmd { margin-top: 6px; font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px; color: var(--muted);
+    background: rgba(255,255,255,0.025); padding: 6px 8px; border-radius: 6px;
+    border: 1px solid var(--border); white-space: pre-wrap; word-break: break-all; }
+
+  .lb { position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+    display: none; align-items: center; justify-content: center; z-index: 30; }
+  .lb.show { display: flex; }
+  .lb img { max-width: 95vw; max-height: 95vh; border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
+  .lb-close { position: absolute; top: 16px; right: 16px; color: var(--text);
+    background: transparent; border: 1px solid var(--border-strong); padding: 6px 12px;
+    border-radius: 6px; font-size: 12px; cursor: pointer; }
+
+  .summary { margin-top: 20px; padding: 16px 20px; border: 1px solid var(--border);
+    border-radius: 10px; background: var(--panel); }
+  .summary h2 { margin: 0 0 10px; font-size: 13px; font-weight: 600; }
+  table.cmp { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.cmp th, table.cmp td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  table.cmp th { color: var(--muted); font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+  table.cmp td.num { font-family: "JetBrains Mono", ui-monospace, monospace; color: var(--text); }
+  .verdict { margin-top: 12px; color: var(--muted); font-size: 12px; }
+  .verdict b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>{{CHARTER}} · agent battle</h1>
+  <span class="meta">{{DATE}} · charter timeline race</span>
+  <span class="tag">agent-browser</span>
+  <span class="tag">site: {{SITE}}</span>
+</header>
+
+<div class="sticky-wrap">
+  <div class="controls">
+    <button class="play" id="playBtn">Play</button>
+    <button class="ghost" id="resetBtn">Reset</button>
+    <button class="ghost" id="speedBtn">1×</button>
+    <span class="clock" id="clock">00:00 / 10:05</span>
+    <div class="spacer"></div>
+    <button class="ghost" id="expandAllBtn">Expand all</button>
+  </div>
+  <div class="now" id="now">
+    <!-- 3 "now showing" columns built by JS -->
+  </div>
+</div>
+
+<div class="stage">
+  <div id="lanes"></div>
+  <div class="axis-global" id="axis"></div>
+
+  <div class="summary">
+    <h2>Final comparison</h2>
+    <table class="cmp">
+      <thead>
+        <tr><th>agent</th><th>duration</th><th>events</th><th>shots</th><th>finding</th></tr>
+      </thead>
+      <tbody id="cmpBody"></tbody>
+    </table>
+    <div class="verdict">
+      Verdict: <b>copilot</b> wins on substance — surfaced a <b>Major</b> JS-error / filter-failure on the zero-result path with console stack traces.
+      <b>codex</b> wins on speed with a clean DOM-level finding. <b>claude</b> wins on breadth and coverage.
+    </div>
+  </div>
+</div>
+
+<div class="detail" id="detail">
+  <div class="row1"><span class="kind" id="dKind"></span><span class="mono" id="dAgent"></span><span class="mono" id="dTime"></span></div>
+  <div class="label" id="dLabel"></div>
+  <div class="cmd" id="dCmd" style="display:none"></div>
+</div>
+
+<div class="lb" id="lightbox"><button class="lb-close" id="lbClose">Close (esc)</button><img id="lbImg" src=""></div>
+
+<script>
+const DATA = __DATA__;
+const order = ["claude","codex","copilot"];
+const maxDur = Math.max(...order.map(a => DATA.agents[a].duration));
+
+const fmt = s => {
+  s = Math.max(0, Math.round(s));
+  const m = Math.floor(s/60), ss = String(s%60).padStart(2,"0");
+  return `${String(m).padStart(2,"0")}:${ss}`;
+};
+
+function highlight(text) {
+  return text.replace(
+    /(zzzqqqxxx|laufschuhe|küchenmöbel|k%C3%BCchenm%C3%B6bel|20 Produkte|eventQBus|autosuggest|filter|closing quote|auto[- ]?navigat\w*|zero[- ]?result\w*|no[- ]?result\w*)/gi,
+    "<em>$1</em>"
+  );
+}
+
+const lanesEl = document.getElementById("lanes");
+const axisEl  = document.getElementById("axis");
+const cmpBody = document.getElementById("cmpBody");
+const nowEl   = document.getElementById("now");
+
+// Build now-showing columns
+for (const agent of order) {
+  const a = DATA.agents[agent];
+  const col = document.createElement("div");
+  col.className = "now-col";
+  col.dataset.agent = agent;
+  col.innerHTML = `
+    <div class="now-head">
+      <span class="now-dot" style="background:${a.accent}"></span>
+      <span class="now-agent">${agent}</span>
+      <span class="now-phase" data-phase></span>
+    </div>
+    <div class="now-event" data-event>waiting…</div>
+  `;
+  nowEl.appendChild(col);
+}
+
+// Build lanes
+for (const agent of order) {
+  const a = DATA.agents[agent];
+  const lane = document.createElement("div");
+  lane.className = "lane";
+  lane.dataset.agent = agent;
+
+  const hdr = document.createElement("div");
+  hdr.className = "lane-header";
+  hdr.innerHTML = `
+    <span class="lane-dot" style="background:${a.accent}"></span>
+    <span class="lane-name">${agent}</span>
+    <span class="lane-model">${a.model}</span>
+    <span class="lane-dur">${fmt(a.duration)} · ${a.events.length} events · ${a.shots.length} shots</span>
+  `;
+  lane.appendChild(hdr);
+
+  // milestones
+  const mrow = document.createElement("div");
+  mrow.className = "milestone-row";
+  for (const m of a.milestones) {
+    const el = document.createElement("div");
+    el.className = "milestone";
+    el.style.left = `${(m.t / maxDur) * 100}%`;
+    el.style.color = a.accent;
+    el.textContent = m.label;
+    mrow.appendChild(el);
+  }
+  lane.appendChild(mrow);
+
+  // track
+  const track = document.createElement("div");
+  track.className = "lane-track";
+  const prog = document.createElement("div");
+  prog.className = "progress";
+  prog.style.background = `linear-gradient(90deg, ${a.accent}1e, ${a.accent}05)`;
+  prog.style.borderRight = `1px solid ${a.accent}`;
+  track.appendChild(prog);
+  const playhead = document.createElement("div");
+  playhead.className = "playhead";
+  playhead.style.background = a.accent;
+  playhead.style.boxShadow = `0 0 8px ${a.accent}aa`;
+  track.appendChild(playhead);
+  a.events.forEach((e, i) => {
+    const d = document.createElement("div");
+    d.className = "event future";
+    d.dataset.kind = e.kind;
+    d.dataset.idx = i;
+    d.style.left = `${(e.t / maxDur) * 100}%`;
+    d.title = `${fmt(e.t)} · ${e.label}`;
+    d.addEventListener("mouseenter", () => showDetail(agent, e));
+    d.addEventListener("mouseleave", hideDetail);
+    d.addEventListener("click", ev => { ev.stopPropagation(); scrubTo(e.t); });
+    track.appendChild(d);
+  });
+  lane.appendChild(track);
+
+  // finding
+  if (a.finding) {
+    const f = document.createElement("div");
+    f.className = "finding";
+    f.innerHTML = `<span class="sev ${a.finding.sev}">${a.finding.sev}</span><span>${a.finding.title}</span>`;
+    lane.appendChild(f);
+  }
+
+  // disclosure
+  const more = document.createElement("button");
+  more.className = "lane-more";
+  more.type = "button";
+  more.innerHTML = `<span class="caret">▶</span> Key moments & screenshots`;
+  more.onclick = () => lane.classList.toggle("expanded");
+  lane.appendChild(more);
+
+  const details = document.createElement("div");
+  details.className = "lane-details";
+
+  if (a.key_moments && a.key_moments.length) {
+    const m = document.createElement("div");
+    m.className = "moments";
+    m.innerHTML = `<div class="moments-title">Key moments · the agent's own words</div>`;
+    for (const km of a.key_moments) {
+      const row = document.createElement("div");
+      row.className = "moment";
+      row.innerHTML = `<div class="moment-t">${fmt(km.t)}</div><div class="moment-q">${highlight(km.text)}</div>`;
+      row.addEventListener("click", () => scrubTo(km.t));
+      m.appendChild(row);
+    }
+    details.appendChild(m);
+  }
+  if (a.shots && a.shots.length) {
+    const s = document.createElement("div");
+    s.className = "shots";
+    s.innerHTML = `<div class="shots-title">Screenshots (${a.shots.length})</div>`;
+    const grid = document.createElement("div");
+    grid.className = "shot-grid";
+    for (const sh of a.shots) {
+      const el = document.createElement("a");
+      el.className = "shot";
+      el.href = sh.rel;
+      el.addEventListener("click", ev => { ev.preventDefault(); openLightbox(sh.rel); });
+      el.innerHTML = `<img src="${sh.rel}" alt="${sh.name}" loading="lazy"><div class="shot-name">${sh.name}</div>`;
+      grid.appendChild(el);
+    }
+    s.appendChild(grid);
+    details.appendChild(s);
+  }
+  lane.appendChild(details);
+
+  lanesEl.appendChild(lane);
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><span class="lane-dot" style="background:${a.accent};margin-right:8px"></span>${agent}</td>
+    <td class="num">${fmt(a.duration)}</td>
+    <td class="num">${a.events.length}</td>
+    <td class="num">${a.shots.length}</td>
+    <td><span class="sev ${a.finding.sev}">${a.finding.sev}</span> ${a.finding.title}</td>
+  `;
+  cmpBody.appendChild(tr);
+}
+
+// axis
+const ticks = 11;
+for (let i = 0; i <= ticks; i++) {
+  const sp = document.createElement("span");
+  sp.className = "tick";
+  sp.style.left = `${(i/ticks)*100}%`;
+  sp.textContent = fmt((maxDur/ticks)*i);
+  axisEl.appendChild(sp);
+}
+
+// Determine current event per agent at time t (last event with e.t <= t)
+function currentEvent(agent, t) {
+  const evs = DATA.agents[agent].events;
+  let last = null;
+  for (const e of evs) { if (e.t <= t) last = e; else break; }
+  return last;
+}
+function currentPhase(agent, t) {
+  const ms = DATA.agents[agent].milestones;
+  let last = "setup";
+  for (const m of ms) { if (m.t <= t) last = m.label; else break; }
+  return last;
+}
+
+// playback + cursor state
+let playing = false, t = 0, speed = 1, last = null;
+const speeds = [1, 2, 4, 8, 20];
+const playBtn = document.getElementById("playBtn");
+const resetBtn = document.getElementById("resetBtn");
+const speedBtn = document.getElementById("speedBtn");
+const clockEl = document.getElementById("clock");
+const expandAllBtn = document.getElementById("expandAllBtn");
+
+function render() {
+  clockEl.textContent = `${fmt(t)} / ${fmt(maxDur)}`;
+  document.querySelectorAll(".lane").forEach(lane => {
+    const agent = lane.dataset.agent;
+    const a = DATA.agents[agent];
+    const visibleT = Math.min(t, a.duration);
+    const pct = (visibleT / maxDur) * 100;
+    lane.querySelector(".progress").style.width = pct + "%";
+    const ph = lane.querySelector(".playhead");
+    ph.style.left = pct + "%";
+    ph.style.display = (t > a.duration) ? "none" : "block";
+    lane.querySelectorAll(".event").forEach(dot => {
+      const e = a.events[+dot.dataset.idx];
+      if (e.t <= t) dot.classList.remove("future"); else dot.classList.add("future");
+    });
+  });
+  // now-showing columns
+  document.querySelectorAll(".now-col").forEach(col => {
+    const agent = col.dataset.agent;
+    const dur = DATA.agents[agent].duration;
+    const phaseEl = col.querySelector("[data-phase]");
+    const evEl = col.querySelector("[data-event]");
+    if (t > dur) {
+      phaseEl.textContent = "done";
+      phaseEl.style.color = "#34d399";
+      evEl.innerHTML = `<span class="now-kind">done</span>finished in ${fmt(dur)}`;
+      return;
+    }
+    phaseEl.style.color = "";
+    const e = currentEvent(agent, t);
+    const p = currentPhase(agent, t);
+    phaseEl.textContent = p;
+    if (e) {
+      evEl.innerHTML = `<span class="now-kind">${e.kind}</span>${escape(e.label)}`;
+      evEl.title = e.detail || e.label;
+    } else {
+      evEl.innerHTML = `<span class="now-kind">—</span>warming up`;
+    }
+  });
+}
+function escape(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+function tick(now) {
+  if (!playing) return;
+  if (last == null) last = now;
+  const dt = (now - last) / 1000 * speed; last = now;
+  t += dt;
+  if (t >= maxDur) { t = maxDur; playing = false; playBtn.textContent = "Replay"; }
+  render();
+  if (playing) requestAnimationFrame(tick);
+}
+playBtn.onclick = () => {
+  if (t >= maxDur) t = 0;
+  playing = !playing;
+  playBtn.textContent = playing ? "Pause" : "Play";
+  if (playing) { last = null; requestAnimationFrame(tick); }
+};
+resetBtn.onclick = () => { t = 0; playing = false; playBtn.textContent = "Play"; render(); };
+speedBtn.onclick = () => {
+  const i = speeds.indexOf(speed);
+  speed = speeds[(i+1) % speeds.length];
+  speedBtn.textContent = speed + "×";
+};
+expandAllBtn.onclick = () => {
+  const lanes = document.querySelectorAll(".lane");
+  const anyCollapsed = [...lanes].some(l => !l.classList.contains("expanded"));
+  lanes.forEach(l => l.classList.toggle("expanded", anyCollapsed));
+  expandAllBtn.textContent = anyCollapsed ? "Collapse all" : "Expand all";
+};
+function scrubTo(tNew) {
+  t = Math.max(0, Math.min(maxDur, tNew));
+  playing = false; playBtn.textContent = "Play";
+  render();
+}
+document.querySelectorAll(".lane-track").forEach(track => {
+  track.addEventListener("click", e => {
+    if (e.target.classList.contains("event")) return;
+    const r = track.getBoundingClientRect();
+    scrubTo(((e.clientX - r.left) / r.width) * maxDur);
+  });
+});
+
+const detail = document.getElementById("detail");
+const dKind = document.getElementById("dKind");
+const dAgent = document.getElementById("dAgent");
+const dTime = document.getElementById("dTime");
+const dLabel = document.getElementById("dLabel");
+const dCmd = document.getElementById("dCmd");
+function showDetail(agent, e) {
+  dKind.textContent = e.kind; dAgent.textContent = agent; dTime.textContent = fmt(e.t);
+  dLabel.textContent = e.label;
+  if (e.detail && e.detail !== e.label) { dCmd.textContent = e.detail; dCmd.style.display = "block"; }
+  else { dCmd.style.display = "none"; }
+  detail.classList.add("show");
+}
+function hideDetail() { detail.classList.remove("show"); }
+
+const lb = document.getElementById("lightbox");
+const lbImg = document.getElementById("lbImg");
+const lbClose = document.getElementById("lbClose");
+function openLightbox(src) { lbImg.src = src; lb.classList.add("show"); }
+lbClose.onclick = () => lb.classList.remove("show");
+lb.addEventListener("click", e => { if (e.target === lb) lb.classList.remove("show"); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") lb.classList.remove("show");
+  if (e.key === " " && e.target === document.body) { e.preventDefault(); playBtn.click(); }
+});
+
+render();
+</script>
+</body>
+</html>

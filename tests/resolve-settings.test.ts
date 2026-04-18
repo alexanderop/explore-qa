@@ -82,6 +82,19 @@ describe("resolveRunSettings precedence ladder", () => {
     expect(s.model).toBe("from-env");
   });
 
+  test("timeout precedence: TIMEOUT_SEC env > local.timeoutSec > default 1800", async () => {
+    expect(
+      (
+        await call({
+          env: { TIMEOUT_SEC: "60" },
+          localConfig: { timeoutSec: 120 },
+        })
+      ).timeoutSec,
+    ).toBe(60);
+    expect((await call({ localConfig: { timeoutSec: 120 } })).timeoutSec).toBe(120);
+    expect((await call()).timeoutSec).toBe(1800);
+  });
+
   test("throws on unknown agent with helpful message", async () => {
     expect(call({ cliAgent: "gemini" })).rejects.toThrow(/Unknown AGENT/);
   });

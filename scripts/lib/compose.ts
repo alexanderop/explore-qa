@@ -38,7 +38,6 @@ const REPO_ROOT = new URL("../..", import.meta.url).pathname;
 const CHARTER_DIR = join(REPO_ROOT, "charters");
 const PROMPTS_DIR = join(REPO_ROOT, "prompts");
 const SITES_DIR = join(REPO_ROOT, "sites");
-const BRAIN_CORE_INDEX = join(REPO_ROOT, "brain/_core/index.md");
 
 const ABSOLUTE_PATH_KEYS = new Set<keyof ComposeContext>([
   "runDir",
@@ -47,10 +46,12 @@ const ABSOLUTE_PATH_KEYS = new Set<keyof ComposeContext>([
   "reportPath",
 ]);
 
-function substitute(template: string, ctx: ComposeContext): string {
+type SubstCtx = ComposeContext & { device: string };
+
+function substitute(template: string, ctx: SubstCtx): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
     if (key in ctx) {
-      const value = String(ctx[key as keyof ComposeContext]);
+      const value = String(ctx[key as keyof SubstCtx]);
       if (ABSOLUTE_PATH_KEYS.has(key as keyof ComposeContext)) {
         return resolve(REPO_ROOT, value);
       }
@@ -140,16 +141,23 @@ async function readOptional(path: string): Promise<string> {
   }
 }
 
-async function readSiteProfile(site: string): Promise<string> {
-  const body = await readOptional(join(SITES_DIR, `${site}.md`));
-  if (!body.trim()) return "";
-  return ["## Site Profile", "", body.trim()].join("\n");
+function readFrontmatterField(raw: string, key: string): string | undefined {
+  if (!raw.startsWith("---\n")) return undefined;
+  const end = raw.indexOf("\n---\n", 4);
+  if (end === -1) return undefined;
+  const yaml = raw.slice(4, end);
+  const re = new RegExp(`^${key}:\\s*(.*)$`, "m");
+  return re.exec(yaml)?.[1]?.trim();
 }
 
-async function readBrainCore(): Promise<string> {
-  const body = await readOptional(BRAIN_CORE_INDEX);
-  if (!body.trim()) return "";
-  return ["## Brain (core principles)", "", body.trim()].join("\n");
+async function readSiteProfile(site: string): Promise<{ viewport?: string; block: string }> {
+  const raw = await readOptional(join(SITES_DIR, `${site}.md`));
+  if (!raw.trim()) return { block: "" };
+  const viewport = readFrontmatterField(raw, "viewport");
+  const bodyStart = raw.startsWith("---\n") ? raw.indexOf("\n---\n", 4) + 5 : 0;
+  const body = bodyStart > 4 ? raw.slice(bodyStart).trim() : raw.trim();
+  const block = body ? ["## Site Profile", "", body].join("\n") : "";
+  return { viewport, block };
 }
 
 export async function loadCharter(name: string): Promise<{ meta: CharterMeta; body: string }> {
@@ -174,11 +182,14 @@ export async function composePrompt(
 
   const { meta, body } = await loadCharter(charterName);
 
-  const charterBody = track(`charter:${charterName}`, substitute(body, ctx));
+  const site = await readSiteProfile(ctx.site);
+  const fullCtx: SubstCtx = { ...ctx, device: site.viewport ?? "iPhone 15 Pro" };
+
+  const charterBody = track(`charter:${charterName}`, substitute(body, fullCtx));
 
   const fragmentParts: string[] = [];
   for (const fragment of meta.includeFragments) {
-    const text = track(`frag:${fragment}`, substitute(await readFragment(fragment), ctx));
+    const text = track(`frag:${fragment}`, substitute(await readFragment(fragment), fullCtx));
     fragmentParts.push(text);
   }
 
@@ -186,14 +197,15 @@ export async function composePrompt(
     .filter(Boolean)
     .join("\n\n");
 
-  const systemBase = track("_system", substitute(await readFragment("_system"), ctx));
-  const honesty = track("_honesty-checks", substitute(await readFragment("_honesty-checks"), ctx));
-  const siteProfile = substitute(await readSiteProfile(ctx.site), ctx);
+  const systemBase = track("_system", substitute(await readFragment("_system"), fullCtx));
+  const honesty = track(
+    "_honesty-checks",
+    substitute(await readFragment("_honesty-checks"), fullCtx),
+  );
+  const siteProfile = substitute(site.block, fullCtx);
   if (siteProfile.trim()) track(`site:${ctx.site}`, siteProfile);
-  const brainCore = substitute(await readBrainCore(), ctx);
-  if (brainCore.trim()) track("brain:_core", brainCore);
 
-  const systemPrompt = [systemBase.trim(), honesty.trim(), siteProfile.trim(), brainCore.trim()]
+  const systemPrompt = [systemBase.trim(), honesty.trim(), siteProfile.trim()]
     .filter(Boolean)
     .join("\n\n");
 

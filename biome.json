@@ -6,7 +6,6 @@
       "**",
       "!**/qa-runs",
       "!**/triage",
-      "!**/brain",
       "!**/docs",
       "!**/.playwright-cli",
       "!**/node_modules"

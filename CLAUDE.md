@@ -5,9 +5,9 @@ Notes for AI agents working on the `explore-qa` harness itself (not on charter r
 ## What this repo is
 
 A site-agnostic, agent-driven exploratory QA harness. A thin Bun runner composes
-a prompt from Markdown fragments + a site profile + generic QA brain principles,
-then shells out to a coding-agent CLI (Claude / Codex / Copilot) that drives a
-browser CLI (`agent-browser` or `playwright-cli`) through one test mission.
+a prompt from Markdown fragments + a site profile, then shells out to a
+coding-agent CLI (Claude / Codex / Copilot) that drives a browser CLI
+(`agent-browser` or `playwright-cli`) through one test mission.
 
 There is no build step, no production bundle — only `bun test`, `tsc --noEmit`,
 and Biome. The "code" is ~500 lines of TypeScript plus a folder tree of Markdown.
@@ -23,9 +23,9 @@ directly — there is no i18n layer.
 - **`scripts/lib/agents.ts`** is the only place to add a new agent backend.
 - **`scripts/lib/browsers.ts`** is the only place to add a new browser backend.
 - **`scripts/lib/compose.ts`** is the only place that reads charters, site
-  profiles, prompt fragments, or brain files. Don't scatter filesystem reads.
-- Everything under `sites/` and `brain/sites/` is user-owned per fork. Never
-  put project-generic content there.
+  profiles, or prompt fragments. Don't scatter filesystem reads.
+- Everything under `sites/` is user-owned per fork. Never put project-generic
+  content there.
 
 ## Editing prompt fragments
 
@@ -46,14 +46,6 @@ Skills live under `.claude/skills/` and are exposed to Codex via a symlink at
 `.claude/skills/` natively; Codex only reads `.agents/skills/`. Do not
 duplicate skill files — edit the originals under `.claude/skills/` and the
 symlink does the rest. Do not delete the symlink; Codex will lose every skill.
-
-## Brain discipline
-
-- `brain/_core/` — generic principles, shipped with explore-qa. Edit carefully,
-  keep it generic, never site-specific.
-- `brain/sites/<site>/` — user-owned, gitignored by default. The `reflect`
-  skill writes here after a charter run. `findings/*` are append-only; never
-  edit them in place.
 
 ## Tests
 

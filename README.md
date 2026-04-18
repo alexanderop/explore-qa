@@ -21,14 +21,12 @@ flowchart LR
     you([YOU: pick a test goal])
     charter[charter + site profile]
     compose[compose<br/>prompt builder]
-    brain[(brain:<br/>principles +<br/>past findings)]
     agent[claude / codex / copilot]
     browser[agent-browser /<br/>playwright-cli]
     site[(real website)]
     report[report.md +<br/>screenshots]
 
     you --> charter --> compose
-    brain --> compose
     compose -- prompt --> agent
     agent --> browser --> site
     site --> report
@@ -56,23 +54,25 @@ Then:
 git clone <this-repo> explore-qa
 cd explore-qa
 bun install
+bun link   # expose `qa` globally (one-time per fork)
 
 # 1. onboard a site (Claude Code required for this step)
 #    Open this folder in Claude Code, then run:
 #    /onboard-site https://example.com
 #
-#    This scaffolds sites/<name>.md, one or two starter charters, and
-#    brain/sites/<name>/ for per-site learnings.
+#    This scaffolds sites/<name>.md and one or two starter charters.
 
 # 2. run a charter
-bun scripts/qa.ts                  # interactive wizard
-bun scripts/qa.ts --list           # list charters / sites / agents / browsers
-bun scripts/qa.ts example-smoke claude agent-browser example   # direct
+qa                  # interactive wizard
+qa --list           # list charters / sites / agents / browsers
+qa example-smoke claude agent-browser example   # direct
 ```
 
+If you skip `bun link`, the same commands work as `bun scripts/qa.ts …`.
+
 The harness ships with one placeholder site (`example`) and one smoke charter
-(`example-smoke`) so `bun scripts/qa.ts` works out of the box. Replace them
-with your own via `/onboard-site`.
+(`example-smoke`) so `qa` works out of the box. Replace them with your own via
+`/onboard-site`.
 
 ## How it works
 
@@ -84,8 +84,6 @@ flowchart LR
         c[charters/&lt;charter&gt;.md<br/>the mission]
         s[sites/&lt;site&gt;.md<br/>baseUrl, journeys, quirks]
         p[prompts/_*.md<br/>system rules, honesty,<br/>browser workflow]
-        bc[brain/_core/<br/>generic QA principles]
-        bs[brain/sites/&lt;site&gt;/<br/>per-site findings]
     end
 
     compose[compose.ts<br/>builds full prompt]
@@ -100,13 +98,11 @@ flowchart LR
     c --> compose
     s --> compose
     p --> compose
-    bc --> compose
-    bs --> compose
     compose --> sp --> agent --> browser
     agent --> runs
 ```
 
-Seven moving parts:
+Six moving parts:
 
 1. **`sites/<name>.md`** — site profile. Frontmatter (`baseUrl`, `viewport`) +
    free-form Markdown body (critical journeys, consent banner, known quirks).
@@ -118,17 +114,13 @@ Seven moving parts:
    `_honesty-checks.md` are always inlined into the system prompt;
    `_browser-workflow.md` and `_report-format.md` are opt-in via
    `includeFragments`.
-4. **`brain/_core/`** — generic, shipped principles; always inlined.
-   **`brain/sites/<name>/`** — user-owned, per-site findings; inlined only for
-   the active site. Gitignored by default.
-5. **`scripts/lib/compose.ts`** — loads the charter, parses frontmatter,
+4. **`scripts/lib/compose.ts`** — loads the charter, parses frontmatter,
    substitutes `{{site}}` / `{{browser}}` / `{{runDir}}` / etc., concatenates
-   fragments + site profile + core brain into `{ prompt, systemPrompt, meta }`.
-   Also computes a `promptHash` and per-fragment `manifest` for regression
-   tracking.
-6. **`scripts/lib/agents.ts`** — switch over `claude` | `codex` | `copilot` that
+   fragments + site profile into `{ prompt, systemPrompt, meta }`. Also computes
+   a `promptHash` and per-fragment `manifest` for regression tracking.
+5. **`scripts/lib/agents.ts`** — switch over `claude` | `codex` | `copilot` that
    builds the right CLI invocation. Add new backends here only.
-7. **`scripts/lib/browsers.ts`** — switch over `agent-browser` | `playwright-cli`
+6. **`scripts/lib/browsers.ts`** — switch over `agent-browser` | `playwright-cli`
    that returns the tool name, the agent allowlist pattern, and any
    browser-specific env vars. Add new browser backends here only.
 
@@ -136,15 +128,15 @@ Seven moving parts:
 
 ```mermaid
 flowchart TD
-    cmd["bun scripts/qa.ts &lt;charter&gt; &lt;agent&gt; &lt;browser&gt; &lt;site&gt;"]
+    cmd["qa &lt;charter&gt; &lt;agent&gt; &lt;browser&gt; &lt;site&gt;"]
     s1[1. resolve settings<br/>CLI &gt; env &gt; qa.local.json &gt; charter]
-    s2[2. compose prompt<br/>fragments + site + brain]
+    s2[2. compose prompt<br/>fragments + site]
     s3[3. mkdir runDir<br/>qa-runs/.../&lt;runId&gt;/]
     s4[4. spawn agent CLI<br/>with allowlist for browser tool]
     s5[5. agent loops<br/>browse → observe → screenshot → note]
     s6[6. agent writes report.md<br/>SBTM + PROOF shape]
     s7[7. harness captures<br/>full session log → logs/]
-    done[You read report.md, triage findings,<br/>optionally run /reflect to fold learnings<br/>into brain/sites/&lt;site&gt;/]
+    done[You read report.md, triage findings]
 
     cmd --> s1 --> s2 --> s3 --> s4 --> s5 --> s6 --> s7 --> done
 ```
@@ -177,8 +169,7 @@ variance.
       { "name": "frag:_browser-workflow", "hash": "a3deabf2" },
       { "name": "_system",               "hash": "ea6cedc8" },
       { "name": "_honesty-checks",       "hash": "8da638c7" },
-      { "name": "site:example",          "hash": "d1248e95" },
-      { "name": "brain:_core",           "hash": "147e5f93" }
+      { "name": "site:example",          "hash": "d1248e95" }
     ]
   }
   ```
@@ -217,7 +208,7 @@ agent.
 
 ## Skills
 
-`explore-qa` ships four skills under `.claude/skills/`, with a symlink at
+`explore-qa` ships a handful of skills under `.claude/skills/`, with a symlink at
 `.agents/skills → ../.claude/skills` so all three agent CLIs pick them up:
 
 - **Claude Code** reads `.claude/skills/` natively.
@@ -225,19 +216,10 @@ agent.
   `.github/skills/` and `.agents/skills/`).
 - **Codex CLI** only scans `.agents/skills/`, which is why the symlink exists.
 
-The skills write to `brain/sites/<active>/`, which only `claude` can do reliably
-today — `codex` and `copilot` can read the skills but aren't expected to run
-`/reflect` or `/meditate`.
-
-- **`/onboard-site <url>`** — scaffold `sites/<name>.md`, two or three starter
-  charters, and `brain/sites/<name>/` by browsing the target and asking a few
-  questions. Run this once per new site.
+- **`/onboard-site <url>`** — scaffold `sites/<name>.md` and two or three
+  starter charters by browsing the target and asking a few questions. Run this
+  once per new site.
 - **`/new-charter`** — guided Q&A to add a new charter for the active site.
-- **`/reflect`** — after a charter run, extract learnings and write them into
-  `brain/sites/<active>/areas/` or `findings/*`. Never runs during a headless
-  charter run.
-- **`/meditate`** — audit `brain/` for duplicates, contradictions, stale nodes.
-  Proposes only; does not edit.
 - **`/agent-battle <charter>`** — run one charter in parallel across all three
   agents (`claude`, `codex`, `copilot`) on `agent-browser`, stream live status
   ticks from each session log, and produce a comparison report (speed,
@@ -247,9 +229,9 @@ today — `codex` and `copilot` can read the skills but aren't expected to run
   ```
   > /agent-battle otto-cart-to-checkout.md
   • Charter: otto-cart-to-checkout, site: otto. Starting all three agents in parallel.
-  • Bash(bun scripts/qa.ts otto-cart-to-checkout claude  agent-browser otto)
-  • Bash(bun scripts/qa.ts otto-cart-to-checkout codex   agent-browser otto)
-  • Bash(bun scripts/qa.ts otto-cart-to-checkout copilot agent-browser otto)
+  • Bash(qa otto-cart-to-checkout claude  agent-browser otto)
+  • Bash(qa otto-cart-to-checkout codex   agent-browser otto)
+  • Bash(qa otto-cart-to-checkout copilot agent-browser otto)
   • All three agents launched. Scheduling first poll.
   • Three agents running on otto-cart-to-checkout. First status tick in ~60s.
   ```
@@ -349,10 +331,3 @@ whether a given `report.md` is actually good.
 
 - Paper (PDF): [developsense.com/.../AnExploratoryTestersNotebook.pdf](https://www.developsense.com/presentations/2007-10-PNSQC-AnExploratoryTestersNotebook.pdf)
 - Further resources: [developsense.com/resources](https://developsense.com/resources)
-
-### Brain / vault pattern — [poteto/brainmaxxing](https://github.com/poteto/brainmaxxing)
-
-The split between `brain/_core/` (shipped, generic QA principles) and
-`brain/sites/<site>/` (user-owned, per-fork, append-only findings) follows
-the brainmaxxing vault discipline: cheap to write, cheap to reread, never
-mutate findings in place.
