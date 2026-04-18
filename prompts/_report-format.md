@@ -3,7 +3,7 @@
 Write the report **exactly** to this template. Keep the H2 headings, order, and
 field names identical — no reordering, no renaming, no extra top-level sections.
 Fill empty sections with `_none_` rather than omitting them. Template follows
-SBTM (Bach/Bolton) + PROOF debrief.
+SBTM (James & Jonathan Bach) + Jon Bach's PROOF debrief.
 
 ```markdown
 # QA Session Report — <charter name>

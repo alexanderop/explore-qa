@@ -296,16 +296,63 @@ Invariants:
   backend-agnostic. Don't put backend-specific subcommands back in the prompts.
 - Screenshots only on findings and key states. Token/time budget.
 
-## Credits
+## Credits & further reading
 
-- **Charter & mission framing** — from Elisabeth Hendrickson's *Explore It!*.
-  A charter is a short mission statement ("explore X, with Y, to discover Z")
-  that gives a tester a clear target without scripting every step. Each file
-  under `charters/` is one such mission — it's what keeps a run focused and
-  exploratory instead of drifting into ad-hoc clicking.
-- **Session-based test management (SBTM)** — from James Bach, Jon Bach, and
-  Michael Bolton. Testing happens in time-boxed, chartered sessions that
-  produce a structured debrief: what was tested, what wasn't, what was found,
-  and where time went. `report.md` follows this shape so a run is auditable
-  after the fact, not just a wall of agent chatter.
-- Brain/vault pattern: [poteto/brainmaxxing](https://github.com/poteto/brainmaxxing).
+Every technique below is load-bearing in the harness — these links are worth
+reading if you want to understand *why* runs are shaped the way they are,
+rather than just what the code does.
+
+### Charter framing — Elisabeth Hendrickson, *Explore It!*
+
+A charter is a one-line mission shaped as "**explore** *target*, **with**
+*resources*, **to discover** *information*." Hendrickson's *Explore It!*
+(Pragmatic Bookshelf, 2013) is the canonical treatment — Chapter 2 ("Charter
+Your Explorations") is where this shape comes from. Each file under
+`charters/` is one such mission, and the system prompt hands the charter
+body to the agent as its entire goal.
+
+- Book: [pragprog.com/titles/ehxta/explore-it/](https://pragprog.com/titles/ehxta/explore-it/)
+
+### Session-Based Test Management (SBTM) — James Bach & Jonathan Bach
+
+SBTM trades scripted test cases for *chartered, time-boxed sessions* with a
+structured debrief. The deliverable is a **session sheet**: what was tested,
+what wasn't, what was found, and where the time went (design vs. bug
+investigation vs. setup). That is exactly the shape of the `## Session` and
+`## Task breakdown` sections in `prompts/_report-format.md` — this is why
+`report.md` reads like a tester's notes instead of a wall of agent chatter.
+
+- James Bach's original article (2000): [satisfice.com/download/session-based-test-management](https://www.satisfice.com/download/session-based-test-management)
+- SBTM paper (PDF): [satisfice.us/articles/sbtm.pdf](https://www.satisfice.us/articles/sbtm.pdf)
+- Overview: [Session-based testing on Wikipedia](https://en.wikipedia.org/wiki/Session-based_testing)
+
+### PROOF debrief heuristic — Jonathan Bach
+
+Jon Bach's five-point debrief shape, used by a test lead when reviewing a
+session sheet with the tester:
+
+- **Past** — what happened during the session
+- **Results** — what was achieved
+- **Obstacles** — what got in the way of good testing
+- **Outlook** — what still needs to be tested
+- **Feelings** — the tester's confidence in the result, and why
+
+This maps one-to-one onto the `## PROOF debrief` section in
+`prompts/_report-format.md`, so the agent's wrap-up has the same shape a
+human tester would write.
+
+### Exploratory testing in practice — Michael Bolton, *An Exploratory Tester's Notebook*
+
+Bolton's PNSQC 2007 paper is the most concrete worked example of what a real
+exploratory session looks like on paper — useful calibration for judging
+whether a given `report.md` is actually good.
+
+- Paper (PDF): [developsense.com/.../AnExploratoryTestersNotebook.pdf](https://www.developsense.com/presentations/2007-10-PNSQC-AnExploratoryTestersNotebook.pdf)
+- Further resources: [developsense.com/resources](https://developsense.com/resources)
+
+### Brain / vault pattern — [poteto/brainmaxxing](https://github.com/poteto/brainmaxxing)
+
+The split between `brain/_core/` (shipped, generic QA principles) and
+`brain/sites/<site>/` (user-owned, per-fork, append-only findings) follows
+the brainmaxxing vault discipline: cheap to write, cheap to reread, never
+mutate findings in place.
