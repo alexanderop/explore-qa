@@ -81,6 +81,25 @@ Problems that got in the way of testing (not product bugs):
 |---|---|---|
 | <name> | console.error / 4xx / 5xx / slow | <short> |
 
+## Accessibility
+
+Quick a11y pass on the reached key states (not a full WCAG audit). Capture an
+accessibility snapshot at each key state and report observations per category.
+The table is mandatory — fill every row, use `_none_` only if no key state was
+reachable at all.
+
+| Category | Status | Notes |
+|---|---|---|
+| Landmarks & headings | ok / warn / fail | <short> |
+| Labels & alt text | ok / warn / fail | <short> |
+| Keyboard reachability & focus order | ok / warn / fail | <short> |
+| Visible focus & contrast | ok / warn / fail | <short> |
+| ARIA roles & states | ok / warn / fail | <short> |
+
+Blocking a11y issues (screen-reader or keyboard use prevented) MUST also appear
+as a Finding above with severity Major or Critical. Minor a11y issues stay in
+this table only.
+
 ## PROOF debrief
 
 - **Past** — what was done? <2–3 sentences>
